@@ -26,7 +26,7 @@ def make_profile(seq):
     """
     prof = make_empty_profile(len(seq))
     for i, let in enumerate(seq):
-        prof[let][i] = 1
+        prof[letter_to_index(let)][i] = 1
     return prof
 
 
@@ -59,21 +59,15 @@ def prof_dist(a, b):
     
 seqs = []
 for line in stdin:
-    seqs.append()
+    line = line.strip()
+    seqs.append(line)
 
 profiles = []
-profile = []
-nucs = ["A","C","G","T"]
-for i in range(len(seqs)):
-    profile =[]
-    for x in seqs[i]:
-        freq = [0,0,0,0]
-        pos = nucs.index(x)
-        freq[pos] = 1
-        profile.append(freq)
+for seq in seqs:
+    profile = make_profile(seq)
     profiles.append(profile)
 
-print(prof_dist(profiles[0], profiles[1]))
+print(profiles[0])
 
 
 class Node:
