@@ -127,9 +127,14 @@ def find_joins(nodes:list, active_nodes):
         prof_a = nodes[a].profile
         prof_b = nodes[b].profile
         c = profile_join(prof_a,prof_b)
-        up_dist = (prof_dist(prof_a,c) + prof_dist(prof_b,c))/2
-        nodes.append(Node(profile=c, up_distance=up_dist, is_active=True))
-
+        # up_dist = (prof_dist(prof_a,c) + prof_dist(prof_b,c))/2 
+        up_dist = prof_dist(prof_a, prof_b)/2
+        new_node = Node(profile=c, up_distance=up_dist, is_active=True)
+        for seq in nodes[a].sequences:
+            new_node.add_sequence(seq)
+        for seq in nodes[b].sequences:
+            new_node.add_sequence(seq)
+        nodes.append(new_node)
         active_nodes -=1
 
 seqs = read_file('../data/test-small.aln')
