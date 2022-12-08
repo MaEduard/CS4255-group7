@@ -56,7 +56,19 @@ def prof_dist(a, b):
                     dist += a[x][i] * b[y][i]
 
     return dist/len(a)
-    
+
+def find_min_dist(profile, profiles):
+    dist = 0
+    min_dist = float('inf')
+    for prof in profiles:
+        dist = prof_dist(profile, prof)
+        if dist == 0:
+            continue 
+        if dist < min_dist:
+            min_dist = dist 
+            
+
+
 seqs = []
 for line in stdin:
     line = line.strip()
