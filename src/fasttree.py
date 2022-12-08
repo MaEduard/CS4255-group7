@@ -77,11 +77,17 @@ def prof_dist(a, b):
 
     return dist/len(a[0])
 
-def find_min_dist_nodes(nodes):
+def r_equation(node_i, total_profile, n, up_sum):
+    ans = n*prof_dist(node_i.profile, total_profile) - prof_dist(node_i, node_i) - (n-1)*node_i.up_distance + node_i.up_distance - up_sum
+    return ans/(n-2)
+
+def find_min_dist_nodes(nodes, total_profile):
     """
     Finds the minimum distance between all possible joins, and returns the index of both nodes. 
 
     Using exhaustive search. 
+
+    TODO include the r_equation to compute r(i) and r(j) to eventually compute d'(i,j) = d(i,j) - r(i) - r(j)
     """
     min_dist = float('inf')
     for i in range(len(nodes)):
@@ -104,7 +110,8 @@ def initialize_leaf_nodes(seqs) -> list:
     nodes = []
     for seq in seqs:
         profile = make_profile(seq)
-        node = Node(profile, up_distance=0, is_active=True)
+        node = Node(profile=profile, up_distance=0, is_active=True)
+        node.add_sequence(seq)
         nodes.append(node)    
     return nodes
 
@@ -112,16 +119,61 @@ def print_profile(a):
     for row in a:
         print(row)
 
-def find_joins(nodes:list, active_nodes):
+def compute_total_profile(seqs):
+    """Computes the profile matrix of a seqs matrix
+    Args:
+        seqs (str[]): matrix of dna sequences
+
+    Returns:
+        float[]: profile matrix of size 4 x k
+    """
+    profile = make_empty_profile(len(seqs[0]))
+    for column in range(len(seqs[0])):
+        count = [0,0,0,0]
+        # go over every motif per column
+        for row in range(len(seqs)):
+            if seqs[row][column] == 'A':
+                count[0] += 1
+            elif seqs[row][column] == 'C':
+                count[1] += 1
+            elif seqs[row][column] == 'G':
+                count[2] += 1
+            else:
+                count[3] +=1
+        for profile_row in range(4):
+            profile[profile_row][column] = count[profile_row]/(len(seqs))
+    return profile
+
+def find_total_profile(prof_i, nodes):
+    """Computes the total distance of node i to other nodes in the old fashion way. We should not do this but
+    actually compute this value by comparing node i to the total profile of all active nodes.
+    
+    * I created this function to double check whether the formula on the right bottom of page 3 of old paper actually holds.
+    Args:
+        prof_i (float[][]): 
+        nodes (str[][]): 
+
+    Returns:
+        float: 
+    """
+    total_profile = 0
+    for node in nodes:
+        if node.is_active:
+            total_profile += prof_dist(prof_i, node.profile)
+    return total_profile
+
+def find_joins(nodes:list, active_nodes, seqs):
     """
     Loops through all active nodes and joins the nodes with the minimum distance. 
     Stops when the number of active nodes is just one. 
 
     TODO Maybe removing the nodes from the list can be used instead of using a bool flag?
-    TODO Node.is_active is currently not working
+    TODO Double check what equation to use for up_dist. In the supplementary they give a different equation?
     """
+
+    total_profile = compute_total_profile(seqs)
     while active_nodes > 1:
-        a, b, mindist = find_min_dist_nodes(nodes)
+        a, b, mindist = find_min_dist_nodes(nodes, total_profile)
         nodes[a].is_active = False 
         nodes[b].is_active = False
         prof_a = nodes[a].profile
@@ -136,17 +188,21 @@ def find_joins(nodes:list, active_nodes):
             new_node.add_sequence(seq)
         nodes.append(new_node)
         active_nodes -=1
-
-seqs = read_file('../data/test-small.aln')
-nodes = initialize_leaf_nodes(seqs)
-active_nodes = len(nodes)
-print(nodes[0].is_active)
-
-find_joins(nodes, active_nodes)
+    
 
 def main():
-    read_file('../data/test-small.aln')
+    seqs = read_file('./data/test-small.aln')
+    nodes = initialize_leaf_nodes(seqs)
+    active_nodes = len(nodes)
 
+    ### PROOF that equation on the right bottom of page 3 in old paper equals comparison to 'total profile'. 
+    # equation is needed for computing r(i) and r(j)
+    i = make_profile(seqs[0])
+    print(find_total_profile(i, nodes))
+    print(prof_dist(i, compute_total_profile(seqs))*len(seqs))
+    ###
+    
+    find_joins(nodes, active_nodes, seqs)
 
 if __name__ == '__main__':
     main()
