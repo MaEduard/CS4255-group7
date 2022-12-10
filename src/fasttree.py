@@ -62,7 +62,8 @@ def profile_join(a, j):
 
 def node_dist(i:Node, j:Node):
     """
-    Calculates and returns the distance between the profiles of node a and node b
+    Calculates and returns the distance between the profiles of node a and node b.
+    Including subtracting with up_distances. 
     """
     dist = 0
     prof_i = i.profile
@@ -238,7 +239,7 @@ def find_joins(nodes:list, seqs):
         k = profile_join(prof_i, prof_j)
         active_nodes-=1
 
-        up_dist = prof_dist(prof_i, prof_j)/2
+        up_dist = node_dist(nodes[i], nodes[j])/2
         new_node = Node(profile=k, up_distance=up_dist, is_active=True)
         nodes.append(new_node)
 
