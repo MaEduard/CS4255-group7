@@ -95,6 +95,15 @@ def r_equation(node_i, total_profile, n, up_sum):
     ans = n*prof_dist(node_i.profile, total_profile) - prof_dist(node_i, node_i) - (n-1)*node_i.up_distance + node_i.up_distance - up_sum
     return ans/(n-2)
 
+def help_function(i, nodes, n):
+    dist = 0
+    for node in nodes:
+        if node.indexes != i.indexes:
+            if node.is_active:
+                dist += prof_dist(i.profile, node.profile) - i.up_distance - node.up_distance
+    
+    return dist/(n-2)
+
 def find_min_dist_nodes(nodes, total_profile, n):
     """
     Finds the minimum distance between all possible joins, and returns the index of both nodes. 
@@ -107,8 +116,6 @@ def find_min_dist_nodes(nodes, total_profile, n):
     TODO include the r_equation to compute r(i) and r(j) to eventually compute d'(i,j) = d(i,j) - r(i) - r(j)
     """
     min_dist = float('inf')
-    ri = 0
-    rj = 0
     for i in range(len(nodes)):
         if nodes[i].is_active: # Skip nodes that are inactive. 
             for j in range(i+1, len(nodes)):
@@ -122,6 +129,9 @@ def find_min_dist_nodes(nodes, total_profile, n):
                         min_dist = dist_prime_i_j
                         ind1 = i
                         ind2 = j
+
+    print(out_dist(nodes[ind1], total_profile, n))
+    print(help_function(nodes[ind1], nodes, n))
 
     return ind1, ind2, min_dist
 
@@ -189,11 +199,18 @@ def find_total_profile(prof_i, nodes):
             total_profile += prof_dist(prof_i, node.profile)
     return total_profile
 
+def calc_up_dist(nodes):
+    dist = 0
+    for node in nodes:
+        if node.is_active:
+            dist += node.up_distance
+    return dist
 def out_dist(node, total_profile, n):
     """
+      return (n*(prof_dist(node.profile, total_profile)) + tot_up_dist - node.up_distance) / (n-2)
     Calculates the out distance from one node. 
     """
-    return n*(prof_dist(node.profile, total_profile) + tot_up_dist - node.up_distance) / (n-2) 
+    return (n*(prof_dist(node.profile, total_profile)) - prof_dist(node.profile, node.profile) -(n-1)*node.up_distance + node.up_distance - tot_up_dist) / (n-2) 
 
 def calc_branch_len(i:Node, j:Node, n, total_profile) -> tuple[float, float]:
     """
@@ -215,6 +232,9 @@ def calc_branch_len(i:Node, j:Node, n, total_profile) -> tuple[float, float]:
 
     return res_i, res_j
 
+def set_last_join(nodes):
+    active_joins = 3
+
 def find_joins(nodes:list, seqs):
     """
     Loops through all active nodes and joins the nodes with the minimum distance. 
@@ -223,8 +243,10 @@ def find_joins(nodes:list, seqs):
     """
     branch_lengths = []
     active_nodes = len(nodes)
-    total_profile = compute_total_profile(nodes, active_nodes)
     while active_nodes > 3:
+        print(active_nodes)
+        total_profile = compute_total_profile(nodes, active_nodes)
+
         i, j, mindist = find_min_dist_nodes(nodes, total_profile, active_nodes)
 
         print(nodes[i].indexes, "<-->", nodes[j].indexes)
@@ -237,20 +259,19 @@ def find_joins(nodes:list, seqs):
         nodes[j].is_active = False
 
         k = profile_join(prof_i, prof_j)
-        active_nodes-=1
 
-        up_dist = node_dist(nodes[i], nodes[j])/2
+        up_dist = prof_dist(nodes[i].profile, nodes[j].profile)/2
         new_node = Node(profile=k, up_distance=up_dist, is_active=True)
         nodes.append(new_node)
 
         new_node.indexes = "("+ nodes[i].indexes + "," + nodes[j].indexes + ")"
 
-        total_profile = compute_total_profile(nodes, active_nodes)
-        i_len, j_len = calc_branch_len(nodes[i],nodes[j], active_nodes, total_profile)
-        branch_lengths.append(i_len)
-        branch_lengths.append(j_len)
+        i_len, j_len = calc_branch_len(nodes[i],nodes[j], active_nodes, total_profile) # TODO Remove this? 
+        branch_lengths.append(str(i) + " " + str(i_len))
+        branch_lengths.append(str(j) + " " + str(j_len))
+        active_nodes-=1
         # break
-    return(branch_lengths)
+    return branch_lengths
 
 def main():
     seqs = read_file('../data/test-small.aln')
@@ -264,7 +285,7 @@ def main():
     # print(prof_dist(i, compute_total_profile(seqs))*len(seqs))
     ###
     
-    branch_lengths = find_joins(nodes, seqs)
-    print(branch_lengths)
+    branch_length = find_joins(nodes, seqs)
+    print(branch_length)
 if __name__ == '__main__':
     main()
