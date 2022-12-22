@@ -1,0 +1,2 @@
+# Ignores the __pycache__ folder with all bytecode compiled files
+src/__pycache__/*
