@@ -158,7 +158,7 @@ def print_profile(a):
     Used for testing.
     """
     for row in a:
-        print(row[0:8])
+        print(row[0:4])
 
 
 def set_total_up_dist(val):
@@ -174,6 +174,8 @@ def update_total_profile(i: Node, j: Node, k: Node, total_profile, n):
     Updates the total profile by subtracting the joined nodes,
     and adding the newly created node. More efficient than iterating
     over all nodes after each join.
+
+    TODO check if this returns the correct total profile
     """
 
     new_up = tot_up_dist - i.up_distance - j.up_distance + k.up_distance
@@ -184,8 +186,8 @@ def update_total_profile(i: Node, j: Node, k: Node, total_profile, n):
 
     for row in range(4):
         for col in range(len(i.profile[0])):  # Number of columns in a profile.
-            total_profile[row][col] += kprof[row][col] / \
-                n-iprof[row][col]/n-jprof[row][col]/n
+            total_profile[row][col] += kprof[row][col]/(n-1)\
+                - iprof[row][col]/n-jprof[row][col]/n
 
     return total_profile
 
@@ -388,8 +390,8 @@ def create_phylogenetic_tree(nodes: list):
     TODO join all the active nodes. Perhaps in a different function.
     This will complete the tree and make sure it is in correct format.
     """
-    total_profile = compute_total_profile(nodes, len(nodes))
     for active_nodes in range(len(nodes), 2, -1):
+        total_profile = compute_total_profile(nodes, len(nodes))
         i, j, mindist = find_min_dist_nodes(nodes, total_profile, active_nodes)
 
         new_node = join_two_nodes(i, j, nodes)
@@ -397,8 +399,6 @@ def create_phylogenetic_tree(nodes: list):
             i, j, nodes, active_nodes, total_profile)
         nodes.append(new_node)
 
-        total_profile = update_total_profile(
-            nodes[i], nodes[j], new_node, total_profile, active_nodes)
 
     print(new_node.value)
 
