@@ -4,6 +4,7 @@ import random
 import numpy
 
 tot_up_dist = 0
+tot_prof_size = 0
 
 
 def read_file(file_name):
@@ -114,8 +115,6 @@ def find_min_dist_nodes(nodes, total_profile, n):
         n = number of active nodes
     """
     min_dist = float('inf')
-    ri = 0
-    rj = 0
     for i in range(len(nodes)):
         if nodes[i].is_active:  # Only look at active nodes.
             for j in range(i+1, len(nodes)):
@@ -267,24 +266,6 @@ def calc_branch_len(i: Node, j: Node, n, total_profile) -> tuple[float, float]:
 
     return round(res_i, 3), round(res_j, 3)
 
-def find_joins(nodes:list, seqs):
-    """
-    Loops through all active nodes and joins the nodes with the minimum distance. 
-    Stops when the number of active nodes is just two. 
-    """
-
-    branch_lengths = []
-    active_nodes = len(nodes)
-    global total_profile
-    total_profile = compute_total_profile(nodes, active_nodes)
-
-    seed_nodes = [node for node in nodes]
-    # create_top_hits(seed_nodes, nodes, len(nodes))
-    while active_nodes > 2:
-        total_profile = compute_total_profile(nodes, active_nodes)
-        i, j, mindist = find_min_dist_nodes(nodes, total_profile, active_nodes)
-        # print(mindist)
-
 
 def calc_branch_len_without_totprof(i, j, n, nodes) -> tuple[float, float]:
     """
@@ -413,6 +394,17 @@ def get_node_value(i: int, j: int, nodes: list, n: int, total_profile):
         "," + nodes[j].value + ":" + str(j_len) + ")"
 
 
+def join_last_nodes(nodes, total_profile):
+    last_nodes = []
+    for i in range(len(nodes)):
+        if nodes[i].is_active:
+            last_nodes.append(i)
+    last_node = join_two_nodes(last_nodes[0], last_nodes[1], nodes)
+    last_node.value = get_node_value(
+        last_nodes[0], last_nodes[1], nodes, 3, total_profile)
+
+    return last_node
+
 def create_phylogenetic_tree(nodes: list):
     """
     Loops through all active nodes and joins the nodes
@@ -435,14 +427,8 @@ def create_phylogenetic_tree(nodes: list):
             i, j, nodes, active_nodes, total_profile)
         nodes.append(new_node)
 
-    last_nodes = []
-    for i in range(len(nodes)):
-        if nodes[i].is_active:
-            last_nodes.append(i)
-    new_node = join_two_nodes(last_nodes[0], last_nodes[1], nodes)
-    new_node.value = get_node_value(
-        last_nodes[0], last_nodes[1], nodes, 3, total_profile)
-    print(new_node.value)
+    last_node = join_last_nodes(nodes, total_profile)
+    print(last_node.value)
         
 
 # def create_top_hits(seed_nodes, nodes, n):
@@ -488,7 +474,7 @@ def create_phylogenetic_tree(nodes: list):
 
 
 def main():
-    seqs = read_file('data/test-small.aln')
+    seqs = read_file('../data/test-small.aln')
     print(seqs)
     nodes = initialize_leaf_nodes(seqs)
 
