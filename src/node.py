@@ -5,14 +5,17 @@ class Node:
     profile: list
     up_distance: float
     is_active: bool
+    sequences: list
+    top_hits = list
+    main_sequence = ""
     value: str
-    best_join: str
 
-    def __init__(self, profile=[], up_distance=0, is_active=False):
+    def __init__(self, profile=[], up_distance=0, is_active=False, main_sequence=""):
         self.profile = profile
         self.up_distance = up_distance
         self.is_active = is_active
-        self.sequences = []
+        self.top_hits = []
+        self.main_sequence = ""
         self.value = ""
     
     def set_active_status(self, val: bool):

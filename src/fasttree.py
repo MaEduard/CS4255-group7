@@ -1,5 +1,6 @@
 # import math
 from node import Node
+import random
 import numpy
 
 tot_up_dist = 0
@@ -100,7 +101,7 @@ def prof_dist(i, j):
                 if x != y:
                     dist += i[x][a] * j[y][a]
     return dist/k
-
+    
 
 def find_min_dist_nodes(nodes, total_profile, n):
     """
@@ -113,6 +114,8 @@ def find_min_dist_nodes(nodes, total_profile, n):
         n = number of active nodes
     """
     min_dist = float('inf')
+    ri = 0
+    rj = 0
     for i in range(len(nodes)):
         if nodes[i].is_active:  # Only look at active nodes.
             for j in range(i+1, len(nodes)):
@@ -227,28 +230,6 @@ def compute_total_profile(nodes, active_nodes):
     return profile
 
 
-def find_total_profile(prof_i, nodes):
-    """
-    Computes the total distance of node i to other nodes in the old fashion
-    way. We should not do this but actually compute this value by comparing
-    node i to the total profile of all active nodes.
-
-    * I created this function to double check whether the formula on the right
-    bottom of page 3 of old paper actually holds.
-    Args:
-        prof_i (float[][]):
-        nodes (str[][]):
-
-    Returns:
-        float:
-    """
-    total_profile = 0
-    for node in nodes:
-        if node.is_active:
-            total_profile += prof_dist(prof_i, node.profile)
-    return total_profile
-
-
 def out_dist(node, total_profile, n):
     """
     Calculates the out distance from one node.
@@ -286,6 +267,24 @@ def calc_branch_len(i: Node, j: Node, n, total_profile) -> tuple[float, float]:
 
     return round(res_i, 3), round(res_j, 3)
 
+def find_joins(nodes:list, seqs):
+    """
+    Loops through all active nodes and joins the nodes with the minimum distance. 
+    Stops when the number of active nodes is just two. 
+    """
+
+    branch_lengths = []
+    active_nodes = len(nodes)
+    global total_profile
+    total_profile = compute_total_profile(nodes, active_nodes)
+
+    seed_nodes = [node for node in nodes]
+    # create_top_hits(seed_nodes, nodes, len(nodes))
+    while active_nodes > 2:
+        total_profile = compute_total_profile(nodes, active_nodes)
+        i, j, mindist = find_min_dist_nodes(nodes, total_profile, active_nodes)
+        # print(mindist)
+
 
 def calc_branch_len_without_totprof(i, j, n, nodes) -> tuple[float, float]:
     """
@@ -319,7 +318,7 @@ def calc_branch_len_without_totprof(i, j, n, nodes) -> tuple[float, float]:
 def calc_d(i: Node, j: Node):
     """
     Calculates the d(i,j) equation from the paper.
-
+    
         Parameters:
             i, j: the nodes to be compared.
         Returns:
@@ -426,7 +425,6 @@ def create_phylogenetic_tree(nodes: list):
         Returns:
             The phylogenetic tree in Newick format.
 
-    TODO join all the active nodes. Perhaps in a different function.
     This will complete the tree and make sure it is in correct format.
     """
     for active_nodes in range(len(nodes), 2, -1):
@@ -445,13 +443,61 @@ def create_phylogenetic_tree(nodes: list):
     new_node.value = get_node_value(
         last_nodes[0], last_nodes[1], nodes, 3, total_profile)
     print(new_node.value)
+        
+
+# def create_top_hits(seed_nodes, nodes, n):
+#     m = int(math.sqrt(len(nodes)))
+
+#     while(len(seed_nodes) > 0):
+#         seed_idx = random.randint(0, len(seed_nodes)-1) #pick random seed node. Note that randint picks random int from inclusive range, hence do len(seed_nodes) - 1
+#         seed = seed_nodes[seed_idx]
+#         top_hits = []
+#         r_seed = out_dist(seed, total_profile, n)
+
+#         for node in nodes:
+#             if node != seed:
+#                 dist_i_j = node_dist(node, seed)
+#                 r_j = out_dist(node, total_profile, n) # shouldn't we use r_equation?
+#                 dist_prime_i_j = dist_i_j - r_seed - r_j
+#                 top_hits.append((dist_prime_i_j, node))
+
+#         top_hits.sort()
+
+#         nodes[seed_idx].top_hits = top_hits[0:m]
+#         seed_nodes.remove(seed)
+
+#         print(seed_nodes)
+
+#         for neighbor in top_hits[0:m]:
+#             neighbor_node = neighbor[1]
+#             top_hits_neighbor = []
+#             for node_tuple in top_hits[0:2*m]:
+#                 node = node_tuple[1]
+#                 if node != neighbor and len(node.top_hits) == 0:
+#                     dist_i_j = node_dist(neighbor_node, node)
+#                     r_j = out_dist(neighbor_node, total_profile, n) 
+#                     r_i = out_dist(node, total_profile, n)
+#                     dist_prime_i_j = dist_i_j - r_i - r_j
+#                     top_hits_neighbor.append((dist_prime_i_j, node))
+#             top_hits_neighbor.sort()
+#             print("Top hits length:")
+#             print(len(top_hits))
+#             neighbor_node.top_hits = top_hits_neighbor
+#             print(neighbor_node)
+#             seed_nodes.remove(neighbor_node)
 
 
 def main():
-
-    seqs = read_file('../data/test-small.aln')
-
+    seqs = read_file('data/test-small.aln')
+    print(seqs)
     nodes = initialize_leaf_nodes(seqs)
+
+    ### PROOF that equation on the right bottom of page 3 in old paper equals comparison to 'total profile'. 
+    # equation is needed for computing r(i) and r(j)
+    # i = make_profile(seqs[0])
+    # print(find_total_profile(i, nodes))
+    # print(prof_dist(i, compute_total_profile(seqs))*len(seqs))
+    ###
 
     create_phylogenetic_tree(nodes)
 
