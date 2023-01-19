@@ -1,4 +1,5 @@
 # import math
+import math
 from node import Node
 import random
 import numpy
@@ -44,6 +45,13 @@ def letter_to_index(let):
         return 2
     elif let == "T":
         return 3
+
+
+def jukes_cantor(d_u):
+
+    dist = -(3/4)*math.log(1-(4/3)*d_u)
+
+    return dist
 
 
 def make_profile(seq):
@@ -102,7 +110,7 @@ def prof_dist(i, j):
                 if x != y:
                     dist += i[x][a] * j[y][a]
     return dist/k
-    
+
 
 def find_min_dist_nodes(nodes, total_profile, n):
     """
@@ -129,7 +137,7 @@ def find_min_dist_nodes(nodes, total_profile, n):
                     # print("r_i : ", r_i, "distance to all other nodes: ", r_i2)
 
                     # The more negative, the better (in general)
-                    dist_prime_i_j = dist_i_j  - r_i - r_j
+                    dist_prime_i_j = dist_i_j - r_i - r_j
 
                     if dist_prime_i_j < min_dist:
                         min_dist = dist_prime_i_j
@@ -238,7 +246,7 @@ def out_dist(node, total_profile, n):
             (n-1)*node.up_distance + node.up_distance - tot_up_dist) / (n-2)
 
 
-def calc_branch_len(i: Node, j: Node, n, total_profile) -> tuple[float, float]:
+def calc_branch_len(i: Node, j: Node, n, total_profile):
     """
     Calculates the branch length from daughter nodes i and j.
 
@@ -267,7 +275,7 @@ def calc_branch_len(i: Node, j: Node, n, total_profile) -> tuple[float, float]:
     return round(res_i, 3), round(res_j, 3)
 
 
-def calc_branch_len_without_totprof(i, j, n, nodes) -> tuple[float, float]:
+def calc_branch_len_without_totprof(i, j, n, nodes):
     """
     Calculates the branch length from daughter nodes i and j.
 
@@ -296,10 +304,88 @@ def calc_branch_len_without_totprof(i, j, n, nodes) -> tuple[float, float]:
     return round(res_i, 3), round(res_j, 3)
 
 
+def recalculate_profiles(node):
+    """ After a nearest neighbor interchange, this method recalculates the profiles
+    of the nodes influenced by the change by propagating it up to the root of the tree.
+    This is done recursively. """
+    if node.parent == None:
+        return
+    new_profile = profile_join(node.left.profile, node.right.profile)
+    node.profile = new_profile
+
+    recalculate_profiles(node.parent)
+
+
+def nearest_neighbor_interchanges(root):
+    print("----------NNI-----------------")
+    queue = []
+    stack = []
+
+    queue.append(root)
+
+    while len(queue) > 0:
+        node = queue.pop(0)
+        if not node.left == None:
+            queue.append(node.left)
+            stack.append(node.left)
+        if not node.right == None:
+            queue.append(node.right)
+            stack.append(node.right)
+
+    while len(stack) > 0:
+        node = stack.pop()
+
+        # find nodes that have both of their children not leaves. Following the illustration about NNI in Fig. 1 in the paper
+        if node.has_two_children():
+            if node.left.has_two_children() and node.right.has_two_children():
+                node_a = node.left.left
+                node_b = node.left.right
+                node_c = node.right.left
+                node_d = node.right.right
+
+                # Use log-corrected profile distance (without up-distance)
+                d_a_b = jukes_cantor(prof_dist(node_a.profile, node_b.profile))
+                d_c_d = jukes_cantor(prof_dist(node_c.profile, node_d.profile))
+                d_a_c = jukes_cantor(prof_dist(node_a.profile, node_c.profile))
+                d_b_d = jukes_cantor(prof_dist(node_b.profile, node_d.profile))
+                d_a_d = jukes_cantor(prof_dist(node_a.profile, node_d.profile))
+                d_b_c = jukes_cantor(prof_dist(node_b.profile, node_c.profile))
+
+                # now there are 2 possible cases in which we need to rearrange the nodes
+                switch_flag = False
+                if (d_a_c + d_b_d) < min((d_a_b + d_c_d), (d_a_d + d_b_c)):
+                    # rearrange so (A, C) and (B, D) are together (new profiles?)
+                    node.left.right = node_c
+                    node.right.left = node_b
+                    switch_flag = True
+
+                    print("switch " + node_c.indexes + " " + node_b.indexes)
+
+                elif (d_a_d + d_b_c) < min((d_a_b + d_c_d), (d_a_c + d_b_d)):
+                    # rearrange so (A, D) and (B, C) are together(new profiles?)
+                    switch_flag = True
+                    node.left.right = node_d
+                    node.right.left = node_b
+                    print("switch " + node_d.indexes + " " + node_b.indexes)
+
+                if switch_flag:
+                    node.left.profile = profile_join(
+                        node_a.profile, node_b.profile)
+                    node.right.profile = profile_join(
+                        node_c.profile, node_d.profile)
+                    recalculate_profiles(node)
+
+        # print(node.indexes)
+
+
+def main():
+    seqs = read_file('data\\test-small.aln')
+
+
 def calc_d(i: Node, j: Node):
     """
     Calculates the d(i,j) equation from the paper.
-    
+
         Parameters:
             i, j: the nodes to be compared.
         Returns:
@@ -421,8 +507,11 @@ def create_phylogenetic_tree(nodes: list):
     """
     for active_nodes in range(len(nodes), 2, -1):
         total_profile = compute_total_profile(nodes, active_nodes)
-        i, j, join_criterion = find_min_dist_nodes(nodes, total_profile, active_nodes)
+        i, j, join_criterion = find_min_dist_nodes(
+            nodes, total_profile, active_nodes)
         new_node = join_two_nodes(i, j, nodes)
+        new_node.left = nodes[i]    # we add the children of the node
+        new_node.right = nodes[j]
         new_node.value = get_node_value(
             i, j, nodes, active_nodes, total_profile)
         nodes.append(new_node)
@@ -461,7 +550,7 @@ def create_phylogenetic_tree(nodes: list):
 #                 node = node_tuple[1]
 #                 if node != neighbor and len(node.top_hits) == 0:
 #                     dist_i_j = node_dist(neighbor_node, node)
-#                     r_j = out_dist(neighbor_node, total_profile, n) 
+#                     r_j = out_dist(neighbor_node, total_profile, n)
 #                     r_i = out_dist(node, total_profile, n)
 #                     dist_prime_i_j = dist_i_j - r_i - r_j
 #                     top_hits_neighbor.append((dist_prime_i_j, node))
@@ -478,14 +567,16 @@ def main():
     print(seqs)
     nodes = initialize_leaf_nodes(seqs)
 
-    ### PROOF that equation on the right bottom of page 3 in old paper equals comparison to 'total profile'. 
+    # PROOF that equation on the right bottom of page 3 in old paper equals comparison to 'total profile'.
     # equation is needed for computing r(i) and r(j)
     # i = make_profile(seqs[0])
     # print(find_total_profile(i, nodes))
     # print(prof_dist(i, compute_total_profile(seqs))*len(seqs))
     ###
 
-    create_phylogenetic_tree(nodes)
+    root = create_phylogenetic_tree(nodes)
+    nearest_neighbor_interchanges(root)
+    # create_phylogenetic_tree(nodes)
 
 
 if __name__ == '__main__':
