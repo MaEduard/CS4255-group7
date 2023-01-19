@@ -452,10 +452,16 @@ def join_two_nodes(i: int, j: int, nodes: list) -> Node:
     new_prof = profile_join(nodes[i].profile, nodes[j].profile)
     nodes[i].is_active = False
     nodes[j].is_active = False
+
     up_dist = prof_dist(nodes[i].profile, nodes[j].profile)/2
 
     # Make a new node.
     new_node = Node(profile=new_prof, up_distance=up_dist, is_active=True)
+    new_node.left = nodes[i]    # we add the children of the node
+    new_node.right = nodes[j]
+
+    nodes[i].parent = new_node
+    nodes[j].parent = new_node
 
     return new_node
 
@@ -510,14 +516,15 @@ def create_phylogenetic_tree(nodes: list):
         i, j, join_criterion = find_min_dist_nodes(
             nodes, total_profile, active_nodes)
         new_node = join_two_nodes(i, j, nodes)
-        new_node.left = nodes[i]    # we add the children of the node
-        new_node.right = nodes[j]
+
         new_node.value = get_node_value(
             i, j, nodes, active_nodes, total_profile)
         nodes.append(new_node)
 
+
     last_node = join_last_nodes(nodes, total_profile)
     print(last_node.value)
+    return last_node
         
 
 # def create_top_hits(seed_nodes, nodes, n):
