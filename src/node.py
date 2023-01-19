@@ -10,7 +10,7 @@ class Node:
     indexes: str
     main_sequence = ""
 
-    def __init__(self, profile=[], up_distance=0, is_active=False, main_sequence=""):
+    def __init__(self, profile=[], up_distance=0, is_active=False, main_sequence="", top_hits = []):
         self.profile = profile
         self.up_distance = up_distance
         self.is_active = is_active
