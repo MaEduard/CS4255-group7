@@ -1,4 +1,6 @@
+# import math
 from node import Node
+import numpy
 
 tot_up_dist = 0
 
@@ -122,10 +124,12 @@ def find_min_dist_nodes(nodes, total_profile, n):
                     # r_i = dist_to_all_other_nodes(i, nodes)/(n-2)
                     # r_j = dist_to_all_other_nodes(j, nodes)/(n-2)
 
-                    dist_prime_i_j = dist_i_j - r_i - r_j
+                    # print("r_i : ", r_i, "distance to all other nodes: ", r_i2)
+
+                    # The more negative, the better (in general)
+                    dist_prime_i_j = dist_i_j  - r_i - r_j
 
                     if dist_prime_i_j < min_dist:
-                        #print(dist_i_j, r_i, r_j, "nodes used: ", i, j)
                         min_dist = dist_prime_i_j
                         ind1 = i
                         ind2 = j
@@ -139,7 +143,7 @@ def initialize_leaf_nodes(seqs) -> list:
 
         Parameters:
             seqs: the list of sequences to be analyzed.
-        
+
         Returns:
             nodes: each sequence turned into a leaf node.
     """
@@ -157,8 +161,12 @@ def print_profile(a):
     """
     Used for testing.
     """
-    for row in a:
-        print(row[0:4])
+    dist = 0
+    for col in range(len(a[0])):
+        for row in range(len(a)):
+            dist += a[row][col]
+        print(dist)
+        dist = 0
 
 
 def set_total_up_dist(val):
@@ -279,6 +287,35 @@ def calc_branch_len(i: Node, j: Node, n, total_profile) -> tuple[float, float]:
     return round(res_i, 3), round(res_j, 3)
 
 
+def calc_branch_len_without_totprof(i, j, n, nodes) -> tuple[float, float]:
+    """
+    Calculates the branch length from daughter nodes i and j.
+
+        Parameters:
+            i = node i
+            j = node j
+            n = number of active nodes
+            total_profile = distance to all other nodes
+        Returns:
+            res_i, res_j: the branch lengths for the parent nodes.
+    """
+    dist_i_j = calc_d(nodes[i], nodes[j])
+
+    r_i = dist_to_all_other_nodes(i, nodes)/(n-2)
+    r_j = dist_to_all_other_nodes(j, nodes)/(n-2)
+    res_i = (dist_i_j + r_i - r_j)/2
+    res_j = (dist_i_j + r_j - r_i)/2
+
+    if res_i < 0:
+        res_j -= res_i
+        res_i = 0
+    elif res_j < 0:
+        res_i -= res_j
+        res_j = 0
+
+    return round(res_i, 3), round(res_j, 3)
+
+
 def calc_d(i: Node, j: Node):
     """
     Calculates the d(i,j) equation from the paper.
@@ -301,8 +338,7 @@ def dist_to_all_other_nodes(i: int, nodes):
     dist = 0
     for j in range(len(nodes)-1):
         if nodes[j].is_active and j != i:
-            dist += calc_d(nodes[i], nodes[j]) - \
-                nodes[i].up_distance - nodes[j].up_distance
+            dist += calc_d(nodes[i], nodes[j])
     return dist
 
 
@@ -350,7 +386,7 @@ def join_two_nodes(i: int, j: int, nodes: list) -> Node:
     new_prof = profile_join(nodes[i].profile, nodes[j].profile)
     nodes[i].is_active = False
     nodes[j].is_active = False
-    up_dist = calc_d(nodes[i], nodes[j])/2
+    up_dist = prof_dist(nodes[i].profile, nodes[j].profile)/2
 
     # Make a new node.
     new_node = Node(profile=new_prof, up_distance=up_dist, is_active=True)
@@ -366,9 +402,12 @@ def get_node_value(i: int, j: int, nodes: list, n: int, total_profile):
         Returns:
             The name of the newly created node.
     """
-    i_len, j_len = calc_branch_len(
-        nodes[i], nodes[j], n, total_profile)
-    # i_len, j_len = get_branch_lengths(i, j, n, nodes)
+    # TODO calc branch lengths correctly
+    i_len, j_len = calc_branch_len_without_totprof(
+        i, j, n, nodes)
+    # print("branch length without total profile: ", i_len, j_len, " using nodes: ", i, j)
+    #i_len, j_len = calc_branch_len(nodes[i], nodes[j], n, total_profile)
+    # print("branch with total profile: ", i_len, j_len, " using nodes: ", i, j)
 
     # Building up the phylogenetic tree in Newick format.
     return "(" + nodes[i].value + ":" + str(i_len) +\
@@ -391,19 +430,25 @@ def create_phylogenetic_tree(nodes: list):
     This will complete the tree and make sure it is in correct format.
     """
     for active_nodes in range(len(nodes), 2, -1):
-        total_profile = compute_total_profile(nodes, len(nodes))
-        i, j, mindist = find_min_dist_nodes(nodes, total_profile, active_nodes)
-
+        total_profile = compute_total_profile(nodes, active_nodes)
+        i, j, join_criterion = find_min_dist_nodes(nodes, total_profile, active_nodes)
         new_node = join_two_nodes(i, j, nodes)
         new_node.value = get_node_value(
             i, j, nodes, active_nodes, total_profile)
         nodes.append(new_node)
 
-
+    last_nodes = []
+    for i in range(len(nodes)):
+        if nodes[i].is_active:
+            last_nodes.append(i)
+    new_node = join_two_nodes(last_nodes[0], last_nodes[1], nodes)
+    new_node.value = get_node_value(
+        last_nodes[0], last_nodes[1], nodes, 3, total_profile)
     print(new_node.value)
 
 
 def main():
+
     seqs = read_file('../data/test-small.aln')
 
     nodes = initialize_leaf_nodes(seqs)
