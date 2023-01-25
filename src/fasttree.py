@@ -162,6 +162,7 @@ def initialize_leaf_nodes(seqs) -> list:
         profile = make_profile(seq)
         node = Node(profile=profile, up_distance=0, is_active=True)
         node.value = str(index)
+        node.index = index
         nodes.append(node)
 
     return nodes
@@ -497,6 +498,7 @@ def join_last_nodes(nodes, total_profile):
 
     return last_node
 
+
 def create_phylogenetic_tree(nodes: list):
     """
     Loops through all active nodes and joins the nodes
@@ -519,13 +521,13 @@ def create_phylogenetic_tree(nodes: list):
 
         new_node.value = get_node_value(
             i, j, nodes, active_nodes, total_profile)
+        new_node.index = len(nodes) - 1
         nodes.append(new_node)
-
 
     last_node = join_last_nodes(nodes, total_profile)
     print(last_node.value)
     return last_node
-        
+
 
 # def create_top_hits(seed_nodes, nodes, n):
 #     m = int(math.sqrt(len(nodes)))
@@ -568,9 +570,71 @@ def create_phylogenetic_tree(nodes: list):
 #             print(neighbor_node)
 #             seed_nodes.remove(neighbor_node)
 
+def dfs_search(node, val):
+    stack = []
+    stack.append(node)
+
+    while len(stack) != 0:
+        curr_node = stack.pop()
+        if curr_node.value == val:
+            return curr_node
+        else:
+            if curr_node.left != None:
+                stack.append(curr_node.left)
+            if curr_node.right != None:
+                stack.append(curr_node.right)
+
+
+def test_nearest_neighbor_interchange(root):
+    node_7 = dfs_search(root, "7")
+    node_1 = dfs_search(root, "1")
+    print("found node: " + node_1.value)
+
+    node_1.parent.right = node_7
+    node_7.parent.left = node_1
+
+    node_1.parent = node_7.parent
+    node_7.parent = node_1.parent
+
+    recalculate_profiles(node_1.parent)
+    recalculate_profiles(node_7.parent)
+
+    nearest_neighbor_interchanges(root)
+
+    print("in test")
+
+    # node_1.parent
+
+
+def update_values(root, nodes):
+    num_active_nodes = len(nodes)
+    queue = []
+    stack = []
+
+    queue.append(root)
+
+    while len(queue) > 0:
+        node = queue.pop(0)
+        if not node.left == None:
+            queue.append(node.left)
+            stack.append(node.left)
+        if not node.right == None:
+            queue.append(node.right)
+            stack.append(node.right)
+
+    while len(stack) > 0:
+        node = stack.pop()
+        print(node.value)
+        if node.left != None and node.right != None:
+            total_profile = compute_total_profile(nodes, num_active_nodes)
+            new_value = get_node_value(
+                node.left.index, node.right.index, nodes, num_active_nodes, total_profile)
+            node.value = new_value
+            # update num_active_nodes
+
 
 def main():
-    seqs = read_file('../data/test-small.aln')
+    seqs = read_file('data\\test-small.aln')
     print(seqs)
     nodes = initialize_leaf_nodes(seqs)
 
@@ -582,8 +646,10 @@ def main():
     ###
 
     root = create_phylogenetic_tree(nodes)
-    nearest_neighbor_interchanges(root)
-    # create_phylogenetic_tree(nodes)
+    # update_values(root, nodes)
+    print("before NNI")
+    # test_nearest_neighbor_interchange(root)
+    print("here")
 
 
 if __name__ == '__main__':
