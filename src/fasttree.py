@@ -291,12 +291,11 @@ def join_nodes(node1, node2, active_nodes, nodes, total_profile):
     merged_node.top_hits = filtered_top_hits
     
     if len(filtered_top_hits) < ((0.8*m)):
-        merged_node.top_hits = update_top_hits(merged_node, nodes, active_nodes, total_profile)
+        update_top_hits(merged_node, nodes, active_nodes, total_profile)
 
     merged_node.value = get_node_value(
     node1, node2, nodes, active_nodes, total_profile)
 
-    print("joining ", node1, " with ", node2)
 
     return merged_node
 
@@ -611,8 +610,11 @@ def get_node_value(i: int, j: int, nodes: list, n: int, total_profile):
             The value of the newly created node.
     """
     # TODO calc branch lengths correctly
-    i_len, j_len = calc_branch_len_without_totprof(
-        i, j, n, nodes)
+    # i_len, j_len = calc_branch_len_without_totprof(
+    #     i, j, n, nodes)
+
+    i_len, j_len = calc_branch_len(
+        nodes[i], nodes[j], n, total_profile)
     # print("branch length without total profile: ", i_len, j_len, " using nodes: ", i, j)
     #i_len, j_len = calc_branch_len(nodes[i], nodes[j], n, total_profile)
     # print("branch with total profile: ", i_len, j_len, " using nodes: ", i, j)
@@ -722,10 +724,8 @@ def main():
     ###
 
     root = create_phylogenetic_tree(nodes)
-    print(root.value)
     nearest_neighbor_interchanges(root)
-    # print(root.value)
-    # create_phylogenetic_tree(nodes)
+    print(root.value)
 
 
 if __name__ == '__main__':
