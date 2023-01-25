@@ -1,23 +1,19 @@
-# import math
 import math
 from node import Node
 import random
-import numpy
+
 
 global tot_up_dist
-global tot_prof_siz
 global m
 
 def read_file(file_name):
-    """
+    """Reads the input file and outputs the strings.
 
-    Reads the input file and appends the sequences.
+    Args:
+        file_name (str): string formatted file name location
 
-        Parameters:
-            file_name: the name of the input file.
-
-        Returns:
-            The sequences from the input file.
+    Returns:
+        str[]: list of sequence strings
     """
     f = open(file_name, "r")
     sequences = []
@@ -30,34 +26,48 @@ def read_file(file_name):
     return sequences
 
 
-def letter_to_index(let):
-    """
-    Maps each nucleotide base to an index.
+def letter_to_index(letter):
+    """Converts a char letter to integer index.
 
-        Returns:
-            The index of the given nucleotide base.
+    Args:
+        letter (char): input letter (A/C/G/T)
+
+    Returns:
+        int: index
     """
-    if let == "A":
+    if letter == "A":
         return 0
-    elif let == "C":
+    elif letter == "C":
         return 1
-    elif let == "G":
+    elif letter == "G":
         return 2
-    elif let == "T":
+    elif letter == "T":
         return 3
 
 
 def jukes_cantor(d_u):
+    """Computes the Jukes Cantor distance for the NNI heuristic.
 
+    Args:
+        d_u (float): uncorrected distance
+
+    Returns:
+        float: Jukes Cantor distance
+    """
     dist = -(3/4)*math.log(1-(4/3)*d_u)
 
     return dist
 
 
 def make_profile(seq):
-    """
-    Makes a new profile based on one sequence.
-    """
+    """Produces frequency profile based on given string sequence.
+
+    Args:
+        seq (str): DNA sequence
+
+    Returns:
+        float[][]: 2D (4 x len(seq)) frequency matrix
+    """    
     prof = make_empty_profile(len(seq))
     for i, let in enumerate(seq):
         prof[letter_to_index(let)][i] = 1
@@ -65,12 +75,14 @@ def make_profile(seq):
 
 
 def make_empty_profile(size):
-    """
-    Creates an empty profile filled with zeros.
+    """Creates empty frequency profile.
 
-        Returns:
-            profile: A profile filled with zeros.
-    """
+    Args:
+        size (int): number of columns for the frequency profile
+
+    Returns:
+        int[][]: 4 x size empty (i.e. 0) frequency profile
+    """    
     profile = [[], [], [], []]
     for row in profile:
         for i in range(size):
@@ -78,23 +90,15 @@ def make_empty_profile(size):
 
     return profile
 
-def make_profile(seq):
-    """
-    Makes a new profile based on one sequence. 
-    """
-    prof = make_empty_profile(len(seq))
-    for i, let in enumerate(seq):
-        prof[letter_to_index(let)][i] = 1
-    return prof
-
 def profile_join(a, b):
-    """
-    Joins two profile together and returns the resulting profile.
+    """Joins two profile together and returns the resulting profile.
 
-        Parameters:
-            a,b: the profiles to be joined.
-        Returns:
-            the resulting profile.
+    Args:
+        a (float[][]): profile of first node to be merged
+        b (float[][]): profile of second node to be merged
+
+    Returns:
+        float[][]: newly merged profile
     """
     new_prof = make_empty_profile(len(a[0]))
     for row in range(4):  # Only 4 nucleotides.
@@ -103,85 +107,85 @@ def profile_join(a, b):
     return new_prof
 
 
-def prof_dist(i, j):
-    """
-    Calculates and returns the distance between the profiles i and j.
+def prof_dist(prof1, prof2):
+    """Computes the distance between profiles. 
 
-        returns:
-            The profile distance between i and j.
+    Args:
+        prof1 (float[][]): _description_
+        prof2 (float[][]): _description_
+
+    Returns:
+        float: distance between two profiles
     """
     dist = 0
-    k = len(i[0])
+    k = len(prof1[0])
     for a in range(k):
-        for x in range(4):  # Only 4 nucleotides.
-            for y in range(4):
+        for x in range(4):  # Checking for A/C/G/T nucleotides in prof1.
+            for y in range(4): # Checking for A/C/G/T nucleotides in prof2.
                 if x != y:
-                    dist += i[x][a] * j[y][a]
+                    dist += prof1[x][a] * prof2[y][a]
     return dist/k
 
 
-def profile_join(a, j):
+def profile_join(prof1, prof2):
+    """Joins two profile matrices based by taking the average of the two input profiles.
+
+    Args:
+        prof1 (_type_): _description_
+        prof2 (_type_): _description_
+
+    Returns:
+        float[][]: joined profile matrix
     """
-    Joins two profile together and returns the result. 
-    """
-    new_prof = make_empty_profile(len(a[0]))
+    new_prof = make_empty_profile(len(prof1[0]))
     for row in range(4):  # Only 4 nucleotides.
-        for col in range(len(a[0])):  # Assume same size for a and j
-            new_prof[row][col] = (a[row][col] + j[row][col])/2
+        for col in range(len(prof1[0])):  # Assume same size for prof1 and prof2
+            new_prof[row][col] = (prof1[row][col] + prof2[row][col])/2
     return new_prof
 
 def out_dist(node, total_profile, n):
+    """Computes the out distance {'r(i)' in the paper}  based on the total profile.
+
+    Args:
+        node (Node): node to calculate the out distance of
+        total_profile (float[][]): total profile so far.
+        n (int): number of active nodes
+
+    Returns:
+        float: out distance
     """
-    Calculates the out distance from one node. 
-    """
-    # return n*(prof_dist(node.profile, total_profile) + tot_up_dist - node.up_distance) / (n-2) 
     return (n*(prof_dist(node.profile, total_profile)) - prof_dist(node.profile, node.profile) - tot_up_dist - (n-1)*node.up_distance) / (n-2) 
 
-def find_min_dist_nodes(nodes, total_profile, n):
+
+def join_criterion(a, b, n, total_profile):
+    """Calculates the Neighbor Joining criterion value that we use to find the best nodes to join (the nodes for which this criterion is 
+    minimized using top hits heuristic).
+
+    Args:
+        a (Node): node a 
+        b (Node): node b 
+        n (int): number of active nodes
+        total_profile (float[][]): _description_
+
+    Returns:
+        float: join criterion value
     """
-    Finds the minimum distance between all possible joins,
-    and returns the index of both nodes.
-
-    Using exhaustive search.
-
-    Parameters:
-        n = number of active nodes
-    """
-    min_dist = float('inf')
-    for i in range(len(nodes)):
-        if nodes[i].is_active:  # Only look at active nodes.
-            for j in range(i+1, len(nodes)):
-                if nodes[j].is_active:  # Only look at active nodes.
-                    dist_i_j = calc_d(nodes[i], nodes[j])
-                    r_i = out_dist(nodes[i], total_profile, n)
-                    r_j = out_dist(nodes[j], total_profile, n)
-
-                    # r_i = dist_to_all_other_nodes(i, nodes)/(n-2)
-                    # r_j = dist_to_all_other_nodes(j, nodes)/(n-2)
-
-                    # print("r_i : ", r_i, "distance to all other nodes: ", r_i2)
-
-                    # The more negative, the better (in general)
-                    dist_prime_i_j = dist_i_j - r_i - r_j
-
-                    if dist_prime_i_j < min_dist:
-                        min_dist = dist_prime_i_j
-                        ind1 = i
-                        ind2 = j
-
-    return ind1, ind2, min_dist
-
-def join_criterion(a: Node, b: Node, n, total_profile):
     dist_i_j = calc_d(a, b) 
     r_j = out_dist(a, total_profile, n) 
     r_i = out_dist(b, total_profile, n) 
     return dist_i_j - r_i - r_j 
 
 def find_nodes_to_be_joined(nodes, total_profile, n):
-    """""""""
-    Finds best nodes to join based on the top_hits list of each node. 
+    """Finds the best nodes to be joined based on their top hits list and the Neighbor Joining Criterion. Updates a node's top hits list in a
+    a lazy way (on the fly) when it encounters a node that has already been joined.
 
-    Returns: node indices of the two nodes to be joined.
+    Args:
+        nodes (Node[]): list of all nodes created so far
+        total_profile (float[][]): profile matrix based on all nodes.
+        n (int): number of active nodes.
+
+    Returns:
+        (Node), (Node): the best nodes to be joined according to the joining criteria.
     """
 
     min_dist = float('inf')
@@ -207,35 +211,48 @@ def find_nodes_to_be_joined(nodes, total_profile, n):
     return node1, node2 
 
 def merge_top_hits(top_hits1, top_hits2):
+    """Merges the top hits lists of the nodes that were found to be best to join. Removes any duplicate top hits after merging.
+    Notice that our top hits list stores both the neighbor joining criterion value and the index of the node that is a top hit for the 
+    node to which the top hits list belongs.
+
+    Args:
+        top_hits1 ((dist, Node)[]): top hits list of fist node to be joined
+        top_hits2 ((dist, Node[])): top hits list of second node to be joined
+
+    Returns:
+        ((dist, Node)[]): merged list of top hits.
+    """
     top_hits_merged = top_hits1 + top_hits2
     top_hits_merged = list(set(top_hits_merged))
 
     return top_hits_merged
 
 def filter_top_hits(merged_node, top_hits, active_nodes, total_profile, nodes):
-    new_top_hits = []
+    """Filters the merged top hits list (created by the top hits lists of the nodes that were joined) to represent the best 
+    top hits for this newly created node called 'merge_node').
 
-    # go over the top hits list and check if there are any inactive nodes in that list. If so, replace them by their active ancestor.
-    # for i in range(len(top_hits)):
-    #     node_tuple = top_hits[i]
-    #     node_idx = node_tuple[1]
-    #     curr = nodes[node_idx]
-    #     if curr.is_active == False:
-    #         while curr.is_active == False:
-    #             curr = curr.parent
-    #         top_hits[i] = curr # preferably I use indices.
-    
+    Args:
+        merged_node (Node): Newly created node after a join
+        top_hits ((dist, Node)[]): list of top hits created after merging top hits lists of both nodes
+        active_nodes (int): number of active nodes
+        total_profile (float[][]): total profile matrix based on all nodes that are active
+        nodes (Node[]): list of all nodes
+
+    Returns:
+        ((dist, Node)[]): newly created top hits list (of length m) for merged node 
+    """
+    new_top_hits = []    
     for node_tuple in top_hits:
-        # Check if node is active 
-        # While node is_inactive:
-        #   node = node.parent 
         node_index = node_tuple[1]
         curr = nodes[node_index]
-        while curr.is_active == False:
+        # If the best hit is inactive, iterate until active ancestor is found
+        while curr.is_active == False: 
                 curr = curr.parent
                 node_index = curr.index
-        if node_index == merged_node.index:
+
+        if node_index == merged_node.index: # If pointing to self
             continue
+        
         dist_i_j = calc_d(merged_node, nodes[node_index])
         r_j = out_dist(merged_node, total_profile, active_nodes) 
         r_i = out_dist(nodes[node_index], total_profile, active_nodes) 
@@ -246,6 +263,14 @@ def filter_top_hits(merged_node, top_hits, active_nodes, total_profile, nodes):
     return new_top_hits[0:m]
 
 def update_top_hits(merged_node, nodes, n, total_profile):
+    """Refreshes the top hits list of the merged node when the size of the list has shrunk below 0.8*m
+
+    Args:
+        merged_node (Node): node that has just been merged
+        nodes (Node[]): list of all nodes
+        n (int): number of active nodes
+        total_profile (float[][]): total profile derived from all current active nodes
+    """
     new_top_hits_list = []
 
     for node in nodes:
@@ -256,6 +281,7 @@ def update_top_hits(merged_node, nodes, n, total_profile):
     new_top_hits_list.sort()
     merged_node.top_hits = new_top_hits_list[0:m]
 
+    # Updates neighbors top hits lists. 
     for (_,i) in new_top_hits_list[0:m]:
         neighbor_node = nodes[i]
         new_neighbor_top_hits = []
@@ -268,14 +294,22 @@ def update_top_hits(merged_node, nodes, n, total_profile):
         new_neighbor_top_hits.sort()
         neighbor_node.top_hits = new_neighbor_top_hits[0:m]
 
+
 def join_nodes(node1, node2, active_nodes, nodes, total_profile):
-    # create new profile
-    # create new top hits list
-    # set name of new node
-    # create new up_distance
-    # update total_profile?
-    # set node1 and node2 to inactive
-    
+    """Joins node1 and node2 by setting them to inactive and creates the merged node with a new profile based on the 
+    profiles of node1 and node2 and the newly calculated up distance. Takes into account the old top hits lists update and
+    updates it appropriately. 
+
+    Args:
+        node1 (Node): first node to join
+        node2 (Node): second node to join
+        active_nodes (int): number of active nodes currently
+        nodes (Node[]): list of all nodes
+        total_profile (flaot[][]): profile based on all active nodes
+
+    Returns:
+        merged_node (Node): the newly created merged node
+    """
     nodes[node1].is_active = False
     nodes[node2].is_active = False
 
@@ -299,15 +333,14 @@ def join_nodes(node1, node2, active_nodes, nodes, total_profile):
 
     return merged_node
 
-def initialize_leaf_nodes(seqs) -> list:
-    """
-    Creates the initial profiles for the input sequences.
+def initialize_leaf_nodes(seqs):
+    """Creates a leaf node for all sequences in the input at the start of the program.
 
-        Parameters:
-            seqs: the list of sequences to be analyzed.
+    Args:
+        seqs (str[]): the list of sequences to be analyzed.
 
-        Returns:
-            nodes: each sequence turned into a leaf node.
+    Returns:
+        nodes (Node[]): list of nodes that represent leaves in the tree.
     """
     nodes = []
     for index, seq in enumerate(seqs):
@@ -320,48 +353,26 @@ def initialize_leaf_nodes(seqs) -> list:
     return nodes
 
 def set_total_up_dist(val):
-    """
-    Sets the global variable for total up distance.
+    """Sets the global varibale tot_up_dist
+
+    Args:
+        val (float): value to update the tot_up_dist
     """
     global tot_up_dist
     tot_up_dist = val
 
 
-def update_total_profile(i: Node, j: Node, k: Node, total_profile, n):
-    """
-    Updates the total profile by subtracting the joined nodes,
-    and adding the newly created node. More efficient than iterating
-    over all nodes after each join.
-
-    TODO check if this returns the correct total profile
-    """
-
-    new_up = tot_up_dist - i.up_distance - j.up_distance + k.up_distance
-    set_total_up_dist(new_up)
-    iprof = i.profile
-    jprof = j.profile
-    kprof = k.profile
-
-    for row in range(4):
-        for col in range(len(i.profile[0])):  # Number of columns in a profile.
-            total_profile[row][col] += kprof[row][col]/(n-1)\
-                - iprof[row][col]/n-jprof[row][col]/n
-
-    return total_profile
-
-
 def compute_total_profile(nodes, active_nodes):
-    """
-    Computes the profile matrix of all active nodes.
+    """Computes the profile matrix of all active nodes.
 
     Also sets the global variable for the total up distance.
 
     Args:
-        nodes: all the nodes of the tree
-        active_nodes: the number of active nodes in the tree.
+        nodes (Node[]): all the nodes of the tree
+        active_nodes (int): the number of active nodes in the tree.
 
     Returns:
-        float[]: profile matrix of size 4 x k
+        profile (float[]): profile matrix of size 4 x k
     """
     k = len(nodes[0].profile[0])
     profile = make_empty_profile(k)
@@ -378,25 +389,32 @@ def compute_total_profile(nodes, active_nodes):
 
 
 def out_dist(node, total_profile, n):
-    """
-    Calculates the out distance from one node.
+    """Computes the out distance {'r(i)' in the paper}  based on the total profile.
+
+    Args:
+        node (Node): node to calculate the out distance of
+        total_profile (float[][]): total profile so far.
+        n (int): number of active nodes
+
+    Returns:
+        float: out distance
     """
     return (n*(prof_dist(node.profile, total_profile)) -
             prof_dist(node.profile, node.profile) -
             (n-1)*node.up_distance + node.up_distance - tot_up_dist) / (n-2)
 
 
-def calc_branch_len(i: Node, j: Node, n, total_profile):
-    """
-    Calculates the branch length from daughter nodes i and j.
+def calc_branch_len(i, j, n, total_profile):
+    """Calculates the branch length from daughter nodes i and j.
 
-        Parameters:
-            i = node i
-            j = node j
-            n = number of active nodes
-            total_profile = distance to all other nodes
-        Returns:
-            res_i, res_j: the branch lengths for the parent nodes.
+    Args:
+        i (Node): node i
+        j (Node): node j
+        n (int): number of active nodes
+        total_profile (float[][]): profile based on all active nodes
+
+    Returns:
+        (float, float): length of the branch between node i and j
     """
     dist_i_j = calc_d(i, j)
 
@@ -415,39 +433,14 @@ def calc_branch_len(i: Node, j: Node, n, total_profile):
     return round(res_i, 3), round(res_j, 3)
 
 
-def calc_branch_len_without_totprof(i, j, n, nodes):
-    """
-    Calculates the branch length from daughter nodes i and j.
-
-        Parameters:
-            i = node i
-            j = node j
-            n = number of active nodes
-            total_profile = distance to all other nodes
-        Returns:
-            res_i, res_j: the branch lengths for the parent nodes.
-    """
-    dist_i_j = calc_d(nodes[i], nodes[j])
-
-    r_i = dist_to_all_other_nodes(i, nodes)/(n-2)
-    r_j = dist_to_all_other_nodes(j, nodes)/(n-2)
-    res_i = (dist_i_j + r_i - r_j)/2
-    res_j = (dist_i_j + r_j - r_i)/2
-
-    if res_i < 0:
-        res_j -= res_i
-        res_i = 0
-    elif res_j < 0:
-        res_i -= res_j
-        res_j = 0
-
-    return round(res_i, 3), round(res_j, 3)
-
-
 def recalculate_profiles(node):
-    """ After a nearest neighbor interchange, this method recalculates the profiles
+    """After a nearest neighbor interchange, this method recalculates the profiles
     of the nodes influenced by the change by propagating it up to the root of the tree.
-    This is done recursively. """
+    This is done recursively. 
+
+    Args:
+        node (Node): node to be propagated
+    """
     if node.parent == None:
         return
     new_profile = profile_join(node.left.profile, node.right.profile)
@@ -499,14 +492,14 @@ def nearest_neighbor_interchanges(root):
                     node.right.left = node_b
                     switch_flag = True
 
-                    print("switch " + node_c.indexes + " " + node_b.indexes)
+                    #print("switch " + node_c.indexes + " " + node_b.indexes)
 
                 elif (d_a_d + d_b_c) < min((d_a_b + d_c_d), (d_a_c + d_b_d)):
                     # rearrange so (A, D) and (B, C) are together(new profiles?)
                     switch_flag = True
                     node.left.right = node_d
                     node.right.left = node_b
-                    print("switch " + node_d.indexes + " " + node_b.indexes)
+                    #print("switch " + node_d.indexes + " " + node_b.indexes)
 
                 if switch_flag:
                     node.left.profile = profile_join(
@@ -515,26 +508,29 @@ def nearest_neighbor_interchanges(root):
                         node_c.profile, node_d.profile)
                     recalculate_profiles(node)
 
-        # print(node.indexes)
-
 def calc_d(i: Node, j: Node):
-    """
-    Calculates the d(i,j) equation from the paper.
+    """Calculates the distance d(i,j) between nodes i and j.
 
-        Parameters:
-            i, j: the nodes to be compared.
-        Returns:
-            The distance between two nodes.
+    Args:
+        i (Node): node i
+        j (Node): node j
+
+    Returns:
+        res (float): node distance
     """
     res = prof_dist(i.profile, j.profile) - i.up_distance - j.up_distance
     return res
 
 
-def dist_to_all_other_nodes(i: int, nodes):
-    """
-    Calculates the distance to all nodes.
+def dist_to_all_other_nodes(i, nodes):
+    """Calculates the distance to all nodes. Equivalent to total profile, but only used for testing.
 
-    Equivalent to total profile, but only used for testing.
+    Args:
+        i (int): node index 
+        nodes (Node[]): list of all nodes
+
+    Returns:
+        dist (int): distance between node i and all other nodes.
     """
     dist = 0
     for j in range(len(nodes)-1):
@@ -544,26 +540,44 @@ def dist_to_all_other_nodes(i: int, nodes):
 
 
 def branch_len(i, j, n, nodes):
-    """
-    Helper function for get_branch_lengths.
+    """Helper function for get_branch_lengths. Based on the algorithm from Wikipedia
+    (https://en.wikipedia.org/wiki/Neighbor_joining#Distance_from_the_pair_members_to_the_new_node).
+    Calculates the branch length of to newly created node. 
 
-    Based on the algorithm from Wikipedia.
+    Args:
+        i (int): node index for node i 
+        j (int): node index for node j 
+        n (int): number of active nodes currently
+        nodes (Node[]): list all nodes
+
+    Returns:
+        float: distance
     """
     return 0.5 * calc_d(nodes[i], nodes[j]) + 1/(2*(n-2)) *\
         (dist_to_all_other_nodes(i, nodes) - dist_to_all_other_nodes(j, nodes))
 
 
 def get_branch_lengths(i, j, active_nodes, nodes):
-    """
-    Calculates branch length based on the Wikipedia article
+    """Calculates branch length based on the Wikipedia article
     on neighbor joining. Can be used to test the other branch
     length calculation function.
+
+    Args:
+        i (_type_): _description_
+        j (_type_): _description_
+        active_nodes (_type_): _description_
+        nodes (_type_): _description_
+
+    Returns:
+        _type_: _description_
     """
     i_len = branch_len(i, j, active_nodes, nodes)
     i_len = round(i_len, 3)
     j_len = calc_d(nodes[i], nodes[j]) - i_len
     j_len = round(j_len, 3)
 
+    # If branch lengths are negative, make them zero and subtract the value
+    # from the other branch. 
     if i_len < 0:
         j_len += -i_len
         i_len = 0
@@ -573,17 +587,18 @@ def get_branch_lengths(i, j, active_nodes, nodes):
     return i_len, j_len
 
 
-def join_two_nodes(i: int, j: int, nodes: list) -> Node:
-    """
-    Joins two nodes into a new node.
+def join_two_nodes(i, j, nodes):
+    """Joins node i and j and outputs the newly created node.
 
-        Parameters:
-            i, j: the indices of the nodes to be joined
-            nodes: the list of all nodes in the tree.
+    Args:
+        i (int): index of first node
+        j (int): index of second node
+        nodes (Node[]): list of all nodes
 
-        Returns:
-            The newly created node.
+    Returns:
+        Node: newly created node based on nodes[i] and nodes[j]
     """
+    # Create a new profile based on the daughter nodes. 
     new_prof = profile_join(nodes[i].profile, nodes[j].profile)
     nodes[i].is_active = False
     nodes[j].is_active = False
@@ -601,35 +616,42 @@ def join_two_nodes(i: int, j: int, nodes: list) -> Node:
     return new_node
 
 
-def get_node_value(i: int, j: int, nodes: list, n: int, total_profile):
-    """
-    Updates each newly created node with the values of its parent nodes.
+def get_node_value(i, j, nodes, n, total_profile):
+    """Updates each newly created node with the values of its parent nodes.
     This way, the last node in the tree will contain the whole tree.
 
-        Returns:
-            The value of the newly created node.
-    """
-    # TODO calc branch lengths correctly
-    # i_len, j_len = calc_branch_len_without_totprof(
-    #     i, j, n, nodes)
+    Args:
+        i (int): index of first daughter node
+        j (int): index of second daughter node
+        nodes (Node[]): list of all nodes
+        n (int): number of active nodes currently
+        total_profile (float[][]): profile based on all active nodes
 
+    Returns:
+        str: The value of the newly created node.
+    """
     i_len, j_len = calc_branch_len(
         nodes[i], nodes[j], n, total_profile)
-    # print("branch length without total profile: ", i_len, j_len, " using nodes: ", i, j)
-    #i_len, j_len = calc_branch_len(nodes[i], nodes[j], n, total_profile)
-    # print("branch with total profile: ", i_len, j_len, " using nodes: ", i, j)
 
-    # Building up the phylogenetic tree in Newick format.
+    # Building up the phylogenetic tree in Newick format.   
     return "(" + nodes[i].value + ":" + str(i_len) +\
         "," + nodes[j].value + ":" + str(j_len) + ")"
 
 
 def join_last_nodes(nodes, total_profile):
+    """Joins the last two active nodes, and returns the root of the tree. 
+
+    Parameters:
+        nodes (Node[]): the list containing the nodes
+        total_profile (float[][]): profile based on all active nodes
+        
+    Returns: 
+        last_node (Node): root node of the tree
+    """
     last_nodes = []
     for i in range(len(nodes)):
         if nodes[i].is_active:
             last_nodes.append(i)
-            print("node ", i, " is active")
 
     last_node = join_two_nodes(last_nodes[0], last_nodes[1], nodes)
     last_node.value = get_node_value(
@@ -637,19 +659,18 @@ def join_last_nodes(nodes, total_profile):
 
     return last_node
 
-def create_phylogenetic_tree(nodes: list):
-    """
-    Loops through all active nodes and joins the nodes
-    with the minimum distance. Stops when the number
-    of active nodes is 3.
+def create_phylogenetic_tree(nodes):
+    """Loops through all active nodes and joins the nodes
+    with the minimum distance, based on top hits heuristics. 
 
-        Parameters:
-            nodes: the initial leaf nodes created from the input sequences
+    Stops when only two remaining nodes are active.  
 
-        Returns:
-            The phylogenetic tree in Newick format.
+    Parameters:
+        nodes (Node[]): the initial leaf nodes created from the input sequences
 
-    This will complete the tree and make sure it is in correct format.
+    Returns:
+        last_node (Node): The root of the tree that contains the full tree information in last_node.value
+
     """
     create_top_hits(nodes, len(nodes))
     initial_nodes = len(nodes)
@@ -659,13 +680,21 @@ def create_phylogenetic_tree(nodes: list):
         new_node = join_nodes(node1, node2, active_nodes, nodes, total_profile)
         nodes.append(new_node)
     
-    print(len(nodes))
     # 2 active nodes left. Merge these.
     last_node = join_last_nodes(nodes, total_profile)
     return last_node
         
 
 def create_top_hits(nodes, n):
+    """Method that will calculate top hits list of all initial leaf nodes. Starts of with a seed node and computes distance 
+    between side node and all other nodes. Sorts the list and picks the top m hits as the top hits list for the seed node. 
+    Furthermore, for these m hits, finds their top m hits from the top 2*m hits of the seed. Exhaustively repeats this full process until all 
+    nodes have their top hits list created. 
+
+    Args:
+        nodes (Node[]): list all nodes
+        n (int): number of active nodes
+    """
     m = int(math.sqrt(len(nodes))) # maybe use math.ceil? 
     unused_nodes = [i for i in range(len(nodes))] # list of index integers
     total_profile = compute_total_profile(nodes, n)
@@ -674,14 +703,12 @@ def create_top_hits(nodes, n):
         seed_idx = random.sample(unused_nodes, 1)[0] #pick random seed node. Note that randint picks random int from inclusive range, hence do len(seed_nodes) - 1
         seed = nodes[seed_idx]
         top_hits = []
-        r_seed = out_dist(seed, total_profile, n)
 
         for node in nodes:
             if node.index != seed.index:
-                dist_i_j = calc_d(node, seed)
-                r_j = out_dist(node, total_profile, n) # shouldn't we use r_equation?
-                dist_prime_i_j = dist_i_j - r_seed - r_j
-                top_hits.append((dist_prime_i_j, node.index)) # 
+                dist_prime = join_criterion(seed, node, n, total_profile)
+
+                top_hits.append((dist_prime, node.index)) # 
 
         top_hits.sort() # the distances for some top hits are apparently exactly the same and thus it starts to compare nodes, which is impossible. 
 
@@ -696,11 +723,8 @@ def create_top_hits(nodes, n):
             for node_tuple in top_hits[0:2*m]:
                 node = nodes[node_tuple[1]]
                 if node.index != neighbor_node.index:
-                    dist_i_j = calc_d(neighbor_node, node) 
-                    r_j = out_dist(neighbor_node, total_profile, n) 
-                    r_i = out_dist(node, total_profile, n) 
-                    dist_prime_i_j = dist_i_j - r_i - r_j 
-                    top_hits_neighbor.append((dist_prime_i_j, node.index))
+                    dist = join_criterion(node, neighbor_node, n, total_profile)
+                    top_hits_neighbor.append((dist, node.index))
                     
             top_hits_neighbor.sort()
             neighbor_node.top_hits = top_hits_neighbor[0:m]
@@ -708,20 +732,12 @@ def create_top_hits(nodes, n):
                 unused_nodes.remove(neighbor_node)
 
 def main():
+    """Main method to start the algorithm. Loads the data and starts FastTree.
+    """
     seqs = read_file('data/test-small.aln')
-    print(seqs)
     nodes = initialize_leaf_nodes(seqs)
     global m 
     m = round(math.sqrt(len(nodes)))
-
-    tot_up_dist = 0
-    tot_prof_siz = 0
-    # PROOF that equation on the right bottom of page 3 in old paper equals comparison to 'total profile'.
-    # equation is needed for computing r(i) and r(j)
-    # i = make_profile(seqs[0])
-    # print(find_total_profile(i, nodes))
-    # print(prof_dist(i, compute_total_profile(seqs))*len(seqs))
-    ###
 
     root = create_phylogenetic_tree(nodes)
     nearest_neighbor_interchanges(root)
