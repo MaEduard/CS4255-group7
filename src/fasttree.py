@@ -6,6 +6,7 @@ import random
 global tot_up_dist
 global m
 
+
 def read_file(file_name):
     """Reads the input file and outputs the strings.
 
@@ -67,7 +68,7 @@ def make_profile(seq):
 
     Returns:
         float[][]: 2D (4 x len(seq)) frequency matrix
-    """    
+    """
     prof = make_empty_profile(len(seq))
     for i, let in enumerate(seq):
         prof[letter_to_index(let)][i] = 1
@@ -82,13 +83,14 @@ def make_empty_profile(size):
 
     Returns:
         int[][]: 4 x size empty (i.e. 0) frequency profile
-    """    
+    """
     profile = [[], [], [], []]
     for row in profile:
         for i in range(size):
             row.append(0)
 
     return profile
+
 
 def profile_join(a, b):
     """Joins two profile together and returns the resulting profile.
@@ -121,7 +123,7 @@ def prof_dist(prof1, prof2):
     k = len(prof1[0])
     for a in range(k):
         for x in range(4):  # Checking for A/C/G/T nucleotides in prof1.
-            for y in range(4): # Checking for A/C/G/T nucleotides in prof2.
+            for y in range(4):  # Checking for A/C/G/T nucleotides in prof2.
                 if x != y:
                     dist += prof1[x][a] * prof2[y][a]
     return dist/k
@@ -139,9 +141,11 @@ def profile_join(prof1, prof2):
     """
     new_prof = make_empty_profile(len(prof1[0]))
     for row in range(4):  # Only 4 nucleotides.
-        for col in range(len(prof1[0])):  # Assume same size for prof1 and prof2
+        # Assume same size for prof1 and prof2
+        for col in range(len(prof1[0])):
             new_prof[row][col] = (prof1[row][col] + prof2[row][col])/2
     return new_prof
+
 
 def out_dist(node, total_profile, n):
     """Computes the out distance {'r(i)' in the paper}  based on the total profile.
@@ -154,7 +158,7 @@ def out_dist(node, total_profile, n):
     Returns:
         float: out distance
     """
-    return (n*(prof_dist(node.profile, total_profile)) - prof_dist(node.profile, node.profile) - tot_up_dist - (n-1)*node.up_distance) / (n-2) 
+    return (n*(prof_dist(node.profile, total_profile)) - prof_dist(node.profile, node.profile) - tot_up_dist - (n-1)*node.up_distance) / (n-2)
 
 
 def join_criterion(a, b, n, total_profile):
@@ -170,10 +174,11 @@ def join_criterion(a, b, n, total_profile):
     Returns:
         float: join criterion value
     """
-    dist_i_j = calc_d(a, b) 
-    r_j = out_dist(a, total_profile, n) 
-    r_i = out_dist(b, total_profile, n) 
-    return dist_i_j - r_i - r_j 
+    dist_i_j = calc_d(a, b)
+    r_j = out_dist(a, total_profile, n)
+    r_i = out_dist(b, total_profile, n)
+    return dist_i_j - r_i - r_j
+
 
 def find_nodes_to_be_joined(nodes, total_profile, n):
     """Finds the best nodes to be joined based on their top hits list and the Neighbor Joining Criterion. Updates a node's top hits list in a
@@ -192,23 +197,24 @@ def find_nodes_to_be_joined(nodes, total_profile, n):
     node1 = None
     node2 = None
     for i in range(len(nodes)):
-        if nodes[i].is_active: # Skip nodes that are inactive. 
+        if nodes[i].is_active:  # Skip nodes that are inactive.
             current_dist = nodes[i].top_hits[0][0]
-            top_node_i =  nodes[i].top_hits[0][1]
+            top_node_i = nodes[i].top_hits[0][1]
             top_node = nodes[top_node_i]
             if top_node.is_active == False:
                 while top_node.is_active == False:
-                    top_node = top_node.parent 
-                dist = join_criterion(nodes[i],top_node, n, total_profile)
+                    top_node = top_node.parent
+                dist = join_criterion(nodes[i], top_node, n, total_profile)
                 nodes[i].top_hits[0] = (dist, top_node.index)
                 current_dist = dist
-            
+
             if current_dist < min_dist:
                 min_dist = current_dist
                 node1 = i
                 node2 = nodes[i].top_hits[0][1]
-                
-    return node1, node2 
+
+    return node1, node2
+
 
 def merge_top_hits(top_hits1, top_hits2):
     """Merges the top hits lists of the nodes that were found to be best to join. Removes any duplicate top hits after merging.
@@ -227,6 +233,7 @@ def merge_top_hits(top_hits1, top_hits2):
 
     return top_hits_merged
 
+
 def filter_top_hits(merged_node, top_hits, active_nodes, total_profile, nodes):
     """Filters the merged top hits list (created by the top hits lists of the nodes that were joined) to represent the best 
     top hits for this newly created node called 'merge_node').
@@ -241,26 +248,27 @@ def filter_top_hits(merged_node, top_hits, active_nodes, total_profile, nodes):
     Returns:
         ((dist, Node)[]): newly created top hits list (of length m) for merged node 
     """
-    new_top_hits = []    
+    new_top_hits = []
     for node_tuple in top_hits:
         node_index = node_tuple[1]
         curr = nodes[node_index]
         # If the best hit is inactive, iterate until active ancestor is found
-        while curr.is_active == False: 
-                curr = curr.parent
-                node_index = curr.index
+        while curr.is_active == False:
+            curr = curr.parent
+            node_index = curr.index
 
-        if node_index == merged_node.index: # If pointing to self
+        if node_index == merged_node.index:  # If pointing to self
             continue
-        
+
         dist_i_j = calc_d(merged_node, nodes[node_index])
-        r_j = out_dist(merged_node, total_profile, active_nodes) 
-        r_i = out_dist(nodes[node_index], total_profile, active_nodes) 
-        dist_prime_i_j = dist_i_j - r_i - r_j 
+        r_j = out_dist(merged_node, total_profile, active_nodes)
+        r_i = out_dist(nodes[node_index], total_profile, active_nodes)
+        dist_prime_i_j = dist_i_j - r_i - r_j
         new_top_hits.append((dist_prime_i_j, node_index))
-    
+
     new_top_hits.sort()
     return new_top_hits[0:m]
+
 
 def update_top_hits(merged_node, nodes, n, total_profile):
     """Refreshes the top hits list of the merged node when the size of the list has shrunk below 0.8*m
@@ -281,16 +289,18 @@ def update_top_hits(merged_node, nodes, n, total_profile):
     new_top_hits_list.sort()
     merged_node.top_hits = new_top_hits_list[0:m]
 
-    # Updates neighbors top hits lists. 
-    for (_,i) in new_top_hits_list[0:m]:
+    # Updates neighbors top hits lists.
+    for (_, i) in new_top_hits_list[0:m]:
         neighbor_node = nodes[i]
         new_neighbor_top_hits = []
-        for (_,j) in new_top_hits_list[0:2*m]:
+        for (_, j) in new_top_hits_list[0:2*m]:
             other_node = nodes[j]
             if other_node.is_active and neighbor_node.index != other_node.index:
-                dist = join_criterion(neighbor_node, other_node, n, total_profile)
+                dist = join_criterion(
+                    neighbor_node, other_node, n, total_profile)
                 new_neighbor_top_hits.append((dist, other_node.index))
-        new_neighbor_top_hits = list(set(new_neighbor_top_hits + neighbor_node.top_hits))
+        new_neighbor_top_hits = list(
+            set(new_neighbor_top_hits + neighbor_node.top_hits))
         new_neighbor_top_hits.sort()
         neighbor_node.top_hits = new_neighbor_top_hits[0:m]
 
@@ -315,23 +325,28 @@ def join_nodes(node1, node2, active_nodes, nodes, total_profile):
 
     new_profile = profile_join(nodes[node1].profile, nodes[node2].profile)
     new_updistance = prof_dist(nodes[node1].profile, nodes[node2].profile)/2
-    merged_node = Node(profile=new_profile, up_distance=new_updistance, is_active=True, index = len(nodes))
+    merged_node = Node(
+        profile=new_profile, up_distance=new_updistance, is_active=True, index=len(nodes))
 
     nodes[node1].parent = merged_node
     nodes[node2].parent = merged_node
+    merged_node.right = nodes[node1]
+    merged_node.left = nodes[node2]
 
-    top_hits_merged = merge_top_hits(nodes[node1].top_hits, nodes[node2].top_hits)
-    filtered_top_hits = filter_top_hits(merged_node, top_hits_merged, active_nodes, total_profile, nodes)
+    top_hits_merged = merge_top_hits(
+        nodes[node1].top_hits, nodes[node2].top_hits)
+    filtered_top_hits = filter_top_hits(
+        merged_node, top_hits_merged, active_nodes, total_profile, nodes)
     merged_node.top_hits = filtered_top_hits
-    
+
     if len(filtered_top_hits) < ((0.8*m)):
         update_top_hits(merged_node, nodes, active_nodes, total_profile)
 
     merged_node.value = get_node_value(
-    node1, node2, nodes, active_nodes, total_profile)
-
+        node1, node2, nodes, active_nodes, total_profile)
 
     return merged_node
+
 
 def initialize_leaf_nodes(seqs):
     """Creates a leaf node for all sequences in the input at the start of the program.
@@ -349,8 +364,9 @@ def initialize_leaf_nodes(seqs):
         node.value = str(index)
         node.index = index
         node.main_sequence = seq
-        nodes.append(node)    
+        nodes.append(node)
     return nodes
+
 
 def set_total_up_dist(val):
     """Sets the global varibale tot_up_dist
@@ -436,7 +452,7 @@ def calc_branch_len(i, j, n, total_profile):
 def recalculate_profiles(node):
     """After a nearest neighbor interchange, this method recalculates the profiles
     of the nodes influenced by the change by propagating it up to the root of the tree.
-    This is done recursively. 
+    This is done recursively.
 
     Args:
         node (Node): node to be propagated
@@ -450,6 +466,12 @@ def recalculate_profiles(node):
 
 
 def nearest_neighbor_interchanges(root):
+    """Calculates log-corrected distances and based on that switches nodes in the topology.
+    Every time there is a switch the profiles of the nodes are also recalculated.
+
+    Args:
+        root (Node): the node at the root of the create tree
+    """
     print("----------NNI-----------------")
     queue = []
     stack = []
@@ -492,14 +514,11 @@ def nearest_neighbor_interchanges(root):
                     node.right.left = node_b
                     switch_flag = True
 
-                    #print("switch " + node_c.indexes + " " + node_b.indexes)
-
                 elif (d_a_d + d_b_c) < min((d_a_b + d_c_d), (d_a_c + d_b_d)):
                     # rearrange so (A, D) and (B, C) are together(new profiles?)
                     switch_flag = True
                     node.left.right = node_d
                     node.right.left = node_b
-                    #print("switch " + node_d.indexes + " " + node_b.indexes)
 
                 if switch_flag:
                     node.left.profile = profile_join(
@@ -507,6 +526,7 @@ def nearest_neighbor_interchanges(root):
                     node.right.profile = profile_join(
                         node_c.profile, node_d.profile)
                     recalculate_profiles(node)
+
 
 def calc_d(i: Node, j: Node):
     """Calculates the distance d(i,j) between nodes i and j.
@@ -577,7 +597,7 @@ def get_branch_lengths(i, j, active_nodes, nodes):
     j_len = round(j_len, 3)
 
     # If branch lengths are negative, make them zero and subtract the value
-    # from the other branch. 
+    # from the other branch.
     if i_len < 0:
         j_len += -i_len
         i_len = 0
@@ -598,7 +618,7 @@ def join_two_nodes(i, j, nodes):
     Returns:
         Node: newly created node based on nodes[i] and nodes[j]
     """
-    # Create a new profile based on the daughter nodes. 
+    # Create a new profile based on the daughter nodes.
     new_prof = profile_join(nodes[i].profile, nodes[j].profile)
     nodes[i].is_active = False
     nodes[j].is_active = False
@@ -607,8 +627,8 @@ def join_two_nodes(i, j, nodes):
 
     # Make a new node.
     new_node = Node(profile=new_prof, up_distance=up_dist, is_active=True)
-    new_node.left = nodes[i]    # we add the children of the node
-    new_node.right = nodes[j]
+    new_node.right = nodes[i]    # we add the children of the node
+    new_node.left = nodes[j]
 
     nodes[i].parent = new_node
     nodes[j].parent = new_node
@@ -633,7 +653,7 @@ def get_node_value(i, j, nodes, n, total_profile):
     i_len, j_len = calc_branch_len(
         nodes[i], nodes[j], n, total_profile)
 
-    # Building up the phylogenetic tree in Newick format.   
+    # Building up the phylogenetic tree in Newick format.
     return "(" + nodes[i].value + ":" + str(i_len) +\
         "," + nodes[j].value + ":" + str(j_len) + ")"
 
@@ -644,7 +664,7 @@ def join_last_nodes(nodes, total_profile):
     Parameters:
         nodes (Node[]): the list containing the nodes
         total_profile (float[][]): profile based on all active nodes
-        
+
     Returns: 
         last_node (Node): root node of the tree
     """
@@ -658,6 +678,7 @@ def join_last_nodes(nodes, total_profile):
         last_nodes[0], last_nodes[1], nodes, 3, total_profile)
 
     return last_node
+
 
 def create_phylogenetic_tree(nodes):
     """Loops through all active nodes and joins the nodes
@@ -676,14 +697,15 @@ def create_phylogenetic_tree(nodes):
     initial_nodes = len(nodes)
     for active_nodes in range(initial_nodes, 2, -1):
         total_profile = compute_total_profile(nodes, active_nodes)
-        node1, node2 = find_nodes_to_be_joined(nodes, total_profile, active_nodes)
+        node1, node2 = find_nodes_to_be_joined(
+            nodes, total_profile, active_nodes)
         new_node = join_nodes(node1, node2, active_nodes, nodes, total_profile)
         nodes.append(new_node)
-    
+
     # 2 active nodes left. Merge these.
     last_node = join_last_nodes(nodes, total_profile)
     return last_node
-        
+
 
 def create_top_hits(nodes, n):
     """Method that will calculate top hits list of all initial leaf nodes. Starts of with a seed node and computes distance 
@@ -695,12 +717,13 @@ def create_top_hits(nodes, n):
         nodes (Node[]): list all nodes
         n (int): number of active nodes
     """
-    m = int(math.sqrt(len(nodes))) # maybe use math.ceil? 
-    unused_nodes = [i for i in range(len(nodes))] # list of index integers
+    m = int(math.sqrt(len(nodes)))  # maybe use math.ceil?
+    unused_nodes = [i for i in range(len(nodes))]  # list of index integers
     total_profile = compute_total_profile(nodes, n)
 
-    while(len(unused_nodes) > 0):
-        seed_idx = random.sample(unused_nodes, 1)[0] #pick random seed node. Note that randint picks random int from inclusive range, hence do len(seed_nodes) - 1
+    while (len(unused_nodes) > 0):
+        # pick random seed node. Note that randint picks random int from inclusive range, hence do len(seed_nodes) - 1
+        seed_idx = random.sample(unused_nodes, 1)[0]
         seed = nodes[seed_idx]
         top_hits = []
 
@@ -708,9 +731,10 @@ def create_top_hits(nodes, n):
             if node.index != seed.index:
                 dist_prime = join_criterion(seed, node, n, total_profile)
 
-                top_hits.append((dist_prime, node.index)) # 
+                top_hits.append((dist_prime, node.index))
 
-        top_hits.sort() # the distances for some top hits are apparently exactly the same and thus it starts to compare nodes, which is impossible. 
+        # the distances for some top hits are apparently exactly the same and thus it starts to compare nodes, which is impossible.
+        top_hits.sort()
 
         nodes[seed_idx].top_hits = top_hits[0:m]
         unused_nodes.remove(seed_idx)
@@ -723,25 +747,130 @@ def create_top_hits(nodes, n):
             for node_tuple in top_hits[0:2*m]:
                 node = nodes[node_tuple[1]]
                 if node.index != neighbor_node.index:
-                    dist = join_criterion(node, neighbor_node, n, total_profile)
+                    dist = join_criterion(
+                        node, neighbor_node, n, total_profile)
                     top_hits_neighbor.append((dist, node.index))
-                    
+
             top_hits_neighbor.sort()
             neighbor_node.top_hits = top_hits_neighbor[0:m]
             if neighbor_node in unused_nodes:
                 unused_nodes.remove(neighbor_node)
+
+
+def dfs_search(node, val):
+    """Performs a depth-first search of the tree and returns the node
+    that corresponds to the value passed as a parameter.
+
+    Args:
+        node (Node): the starting node of the search (in our case - root)
+        val (String): the value the search is looking for in the nodes 
+    """
+    stack = []
+    stack.append(node)
+
+    while len(stack) != 0:
+        curr_node = stack.pop()
+        if curr_node.value == val:
+            return curr_node
+        else:
+            if curr_node.left != None:
+                stack.append(curr_node.left)
+            if curr_node.right != None:
+                stack.append(curr_node.right)
+
+
+def test_nearest_neighbor_interchange(root, nodes):
+    """This test shows the efficacy of NNI. It switches two nodes in the topology
+    which our phylogenic tree algorithm came up with and performs NNI on that
+    "false" topology. The result after the NNI is that the topology is brought
+    back to the original one before the manual interchange. This proves that NNI
+    at least in this particular case executes the right interchange of nodes.
+    By running the test the topologies are printed in the console in Newick
+    format and easy to understand.
+
+    Args:
+        root (Node): the node at the root of the create tree
+        nodes (Node[]): list of all nodes
+    """
+    node_7 = dfs_search(root, "7")
+    node_1 = dfs_search(root, "1")
+
+    node_1.parent.left = node_7
+    node_7.parent.right = node_1
+
+    node_1.parent = node_7.parent
+    node_7.parent = node_1.parent
+
+    recalculate_profiles(node_1.parent)
+    recalculate_profiles(node_7.parent)
+
+    print("--------Test---------")
+
+    update_values(root, nodes)
+    print("After node switching:")
+    print(root.value)
+
+    nearest_neighbor_interchanges(root)
+    update_values(root, nodes)
+
+    print("After NNI:")
+    print(root.value)
+    print("---------End Test-------")
+
+    # node_1.parent
+
+
+def update_values(root, nodes):
+    """In case any switching of nodes has happened (in NNI or in testing),
+    the values of the nodes which are the representation of the joins and lengths
+    still need to be updated because the switching in NNI happens only at the
+    references in the nodes. This method handles the values update.
+
+    Args:
+        root (Node): the node at the root of the create tree
+        nodes (Node[]): list of all nodes
+    """
+    num_active_nodes = len(nodes)
+    queue = []
+    stack = []
+
+    queue.append(root)
+
+    # traverse the nodes in an order starting from the leaves
+    while len(queue) > 0:
+        node = queue.pop(0)
+        if not node.left == None:
+            queue.append(node.left)
+            stack.append(node.left)
+        if not node.right == None:
+            queue.append(node.right)
+            stack.append(node.right)
+
+    stack.insert(0, root)
+    while len(stack) > 0:
+        node = stack.pop()
+        if node.left != None and node.right != None:
+            total_profile = compute_total_profile(nodes, num_active_nodes)
+            new_value = get_node_value(
+                node.left.index, node.right.index, nodes, num_active_nodes, total_profile)
+            node.value = new_value
+            num_active_nodes -= 1
+
 
 def main():
     """Main method to start the algorithm. Loads the data and starts FastTree.
     """
     seqs = read_file('data/test-small.aln')
     nodes = initialize_leaf_nodes(seqs)
-    global m 
+    global m
     m = round(math.sqrt(len(nodes)))
 
     root = create_phylogenetic_tree(nodes)
-    nearest_neighbor_interchanges(root)
     print(root.value)
+    nearest_neighbor_interchanges(root)
+    update_values(root, nodes)
+    print(root.value)
+    # test_nearest_neighbor_interchange(root, nodes)
 
 
 if __name__ == '__main__':
