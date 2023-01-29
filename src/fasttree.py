@@ -472,7 +472,6 @@ def nearest_neighbor_interchanges(root):
     Args:
         root (Node): the node at the root of the create tree
     """
-    print("----------NNI-----------------")
     queue = []
     stack = []
 
@@ -867,7 +866,11 @@ def main():
 
     root = create_phylogenetic_tree(nodes)
     print(root.value)
-    nearest_neighbor_interchanges(root)
+
+    nni_iterations = math.ceil(math.log2(len(nodes))) + 1
+    for _ in range(nni_iterations):
+        nearest_neighbor_interchanges(root)
+
     update_values(root, nodes)
     print(root.value)
     # test_nearest_neighbor_interchange(root, nodes)
