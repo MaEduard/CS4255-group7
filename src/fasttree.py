@@ -110,7 +110,7 @@ def profile_join(a, b):
 
 
 def prof_dist(prof1, prof2):
-    """Computes the distance between profiles. 
+    """Computes the distance between profiles.
 
     Args:
         prof1 (float[][]): _description_
@@ -166,8 +166,8 @@ def join_criterion(a, b, n, total_profile):
     minimized using top hits heuristic).
 
     Args:
-        a (Node): node a 
-        b (Node): node b 
+        a (Node): node a
+        b (Node): node b
         n (int): number of active nodes
         total_profile (float[][]): _description_
 
@@ -308,7 +308,7 @@ def update_top_hits(merged_node, nodes, n, total_profile):
 def join_nodes(node1, node2, active_nodes, nodes, total_profile):
     """Joins node1 and node2 by setting them to inactive and creates the merged node with a new profile based on the 
     profiles of node1 and node2 and the newly calculated up distance. Takes into account the old top hits lists update and
-    updates it appropriately. 
+    updates it appropriately.
 
     Args:
         node1 (Node): first node to join
@@ -457,7 +457,7 @@ def recalculate_profiles(node):
     Args:
         node (Node): node to be propagated
     """
-    if node.parent == None:
+    if node.parent is None:
         return
     new_profile = profile_join(node.left.profile, node.right.profile)
     node.profile = new_profile
@@ -479,10 +479,10 @@ def nearest_neighbor_interchanges(root):
 
     while len(queue) > 0:
         node = queue.pop(0)
-        if not node.left == None:
+        if node.left is not None:
             queue.append(node.left)
             stack.append(node.left)
-        if not node.right == None:
+        if node.right is not None:
             queue.append(node.right)
             stack.append(node.right)
 
@@ -545,7 +545,7 @@ def dist_to_all_other_nodes(i, nodes):
     """Calculates the distance to all nodes. Equivalent to total profile, but only used for testing.
 
     Args:
-        i (int): node index 
+        i (int): node index
         nodes (Node[]): list of all nodes
 
     Returns:
@@ -561,11 +561,11 @@ def dist_to_all_other_nodes(i, nodes):
 def branch_len(i, j, n, nodes):
     """Helper function for get_branch_lengths. Based on the algorithm from Wikipedia
     (https://en.wikipedia.org/wiki/Neighbor_joining#Distance_from_the_pair_members_to_the_new_node).
-    Calculates the branch length of to newly created node. 
+    Calculates the branch length of to newly created node.
 
     Args:
-        i (int): node index for node i 
-        j (int): node index for node j 
+        i (int): node index for node i
+        j (int): node index for node j
         n (int): number of active nodes currently
         nodes (Node[]): list all nodes
 
@@ -606,7 +606,7 @@ def get_branch_lengths(i, j, active_nodes, nodes):
     return i_len, j_len
 
 
-def join_two_nodes(i, j, nodes):
+def join_last_nodes(i, j, nodes):
     """Joins node i and j and outputs the newly created node.
 
     Args:
@@ -657,14 +657,14 @@ def get_node_value(i, j, nodes, n, total_profile):
         "," + nodes[j].value + ":" + str(j_len) + ")"
 
 
-def join_last_nodes(nodes, total_profile):
-    """Joins the last two active nodes, and returns the root of the tree. 
+def find_last_join(nodes, total_profile):
+    """Joins the last two active nodes, and returns the root of the tree.
 
     Parameters:
         nodes (Node[]): the list containing the nodes
         total_profile (float[][]): profile based on all active nodes
 
-    Returns: 
+    Returns:
         last_node (Node): root node of the tree
     """
     last_nodes = []
@@ -672,7 +672,7 @@ def join_last_nodes(nodes, total_profile):
         if nodes[i].is_active:
             last_nodes.append(i)
 
-    last_node = join_two_nodes(last_nodes[0], last_nodes[1], nodes)
+    last_node = join_last_nodes(last_nodes[0], last_nodes[1], nodes)
     last_node.value = get_node_value(
         last_nodes[0], last_nodes[1], nodes, 3, total_profile)
 
@@ -681,9 +681,9 @@ def join_last_nodes(nodes, total_profile):
 
 def create_phylogenetic_tree(nodes):
     """Loops through all active nodes and joins the nodes
-    with the minimum distance, based on top hits heuristics. 
+    with the minimum distance, based on top hits heuristics.
 
-    Stops when only two remaining nodes are active.  
+    Stops when only two remaining nodes are active.
 
     Parameters:
         nodes (Node[]): the initial leaf nodes created from the input sequences
@@ -694,6 +694,8 @@ def create_phylogenetic_tree(nodes):
     """
     create_top_hits(nodes, len(nodes))
     initial_nodes = len(nodes)
+
+    # Loop until only two of the remaining leaves are left.
     for active_nodes in range(initial_nodes, 2, -1):
         total_profile = compute_total_profile(nodes, active_nodes)
         node1, node2 = find_nodes_to_be_joined(
@@ -702,15 +704,16 @@ def create_phylogenetic_tree(nodes):
         nodes.append(new_node)
 
     # 2 active nodes left. Merge these.
-    last_node = join_last_nodes(nodes, total_profile)
+    last_node = find_last_join(nodes, total_profile)
     return last_node
 
 
 def create_top_hits(nodes, n):
-    """Method that will calculate top hits list of all initial leaf nodes. Starts of with a seed node and computes distance 
+    """
+    Method that will calculate top hits list of all initial leaf nodes. Starts of with a seed node and computes distance 
     between side node and all other nodes. Sorts the list and picks the top m hits as the top hits list for the seed node. 
     Furthermore, for these m hits, finds their top m hits from the top 2*m hits of the seed. Exhaustively repeats this full process until all 
-    nodes have their top hits list created. 
+    nodes have their top hits list created.
 
     Args:
         nodes (Node[]): list all nodes
@@ -762,7 +765,7 @@ def dfs_search(node, val):
 
     Args:
         node (Node): the starting node of the search (in our case - root)
-        val (String): the value the search is looking for in the nodes 
+        val (String): the value the search is looking for in the nodes
     """
     stack = []
     stack.append(node)
@@ -772,9 +775,9 @@ def dfs_search(node, val):
         if curr_node.value == val:
             return curr_node
         else:
-            if curr_node.left != None:
+            if curr_node.left is not None:
                 stack.append(curr_node.left)
-            if curr_node.right != None:
+            if curr_node.right is not None:
                 stack.append(curr_node.right)
 
 
@@ -838,17 +841,17 @@ def update_values(root, nodes):
     # traverse the nodes in an order starting from the leaves
     while len(queue) > 0:
         node = queue.pop(0)
-        if not node.left == None:
+        if node.left is not None:
             queue.append(node.left)
             stack.append(node.left)
-        if not node.right == None:
+        if node.right is not None:
             queue.append(node.right)
             stack.append(node.right)
 
     stack.insert(0, root)
     while len(stack) > 0:
         node = stack.pop()
-        if node.left != None and node.right != None:
+        if node.left is not None and node.right is not None:
             total_profile = compute_total_profile(nodes, num_active_nodes)
             new_value = get_node_value(
                 node.left.index, node.right.index, nodes, num_active_nodes, total_profile)
@@ -857,15 +860,21 @@ def update_values(root, nodes):
 
 
 def main():
-    """Main method to start the algorithm. Loads the data and starts FastTree.
     """
-    seqs = read_file('data/test-small.aln')
+    Main method to start the algorithm. Loads the data and starts FastTree.
+    """
+    try:
+        seqs = read_file('data/test-small.aln')
+    except FileNotFoundError:
+        seqs = read_file('../data/test-small.aln')
+
     nodes = initialize_leaf_nodes(seqs)
-    global m
+
+    global m  # Used globally for top hits heuristics.
     m = round(math.sqrt(len(nodes)))
 
+    # Create initial topology.
     root = create_phylogenetic_tree(nodes)
-    print(root.value)
 
     nni_iterations = math.ceil(math.log2(len(nodes))) + 1
     for _ in range(nni_iterations):
@@ -873,7 +882,6 @@ def main():
 
     update_values(root, nodes)
     print(root.value)
-    # test_nearest_neighbor_interchange(root, nodes)
 
 
 if __name__ == '__main__':
