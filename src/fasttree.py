@@ -832,7 +832,8 @@ def update_values(root, nodes):
         root (Node): the node at the root of the create tree
         nodes (Node[]): list of all nodes
     """
-    num_active_nodes = len(nodes)
+    # Here I caclculate the number of nodes in the final tree because we don't keep track of that number anywhere else
+    num_active_nodes = 1
     queue = []
     stack = []
 
@@ -844,9 +845,11 @@ def update_values(root, nodes):
         if node.left is not None:
             queue.append(node.left)
             stack.append(node.left)
+            num_active_nodes += 1
         if node.right is not None:
             queue.append(node.right)
             stack.append(node.right)
+            num_active_nodes += 1
 
     stack.insert(0, root)
     while len(stack) > 0:
@@ -881,6 +884,7 @@ def main():
         nearest_neighbor_interchanges(root)
 
     update_values(root, nodes)
+    test_nearest_neighbor_interchange(root, nodes)
     print(root.value)
 
 
