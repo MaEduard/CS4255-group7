@@ -1,5 +1,5 @@
 # CS4255-group7
-FastTree implementation for the group project of course CS4255 (TU Delft) by Eduard Ma, Olof Jonnerby, and Georgi Trevnenski 
+FastTree implementation for the group project of the course CS4255 (TU Delft) by Eduard Ma, Olof Jonnerby, and Georgi Trevnenski 
 
 # How to run the code
 Open the src/fasttree.py file which contains the implementation of the FastTree algorithm as described in https://doi.org/10.1093/molbev/msp077. 
